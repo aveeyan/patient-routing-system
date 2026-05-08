@@ -1,0 +1,49 @@
+# app/main.py
+
+"""FastAPI application for the AI-Powered Patient Triage Chatbot."""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.routes.triage import router as triage_router
+from core.config import settings
+from core.logger import logger
+from db.session import engine
+from db.models import Base
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Create database tables on startup, clean up on shutdown."""
+    logger.info("Starting up — creating database tables")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    logger.info("Shutting down")
+    await engine.dispose()
+
+
+app = FastAPI(
+    title="Patient Triage Chatbot",
+    description="AI-powered patient triage and routing system",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(triage_router, prefix="/triage", tags=["Triage"])
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "patient-triage-chatbot"}

@@ -44,6 +44,13 @@ class AzureOpenAISettings(BaseSettings):
         le=2.0
     )
 
+    request_timeout: float = Field(
+        default=30.0,
+        ge=5.0,
+        le=120.0,
+        description="Timeout in seconds for each Azure OpenAI API call",
+    )
+
     model_config = SettingsConfigDict(env_prefix="AZURE_OPENAI_")
 
 ## Settings for Azure Speech Services (optional)
