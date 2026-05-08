@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+openai
+azure-identity
+sqlalchemy
+aiosqlite
+azure-cognitiveservices-speech
+python-dotenv
+loguru
+pytest
+pytest-asyncio
+httpx
