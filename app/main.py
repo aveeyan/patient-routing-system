@@ -2,11 +2,17 @@
 
 """FastAPI application for the AI-Powered Patient Triage Chatbot."""
 
+# Standard Imports
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+# Third Party Imports
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 
+# Local Imports
 from app.api.routes.triage import router as triage_router
 from core.config import settings
 from core.logger import logger
@@ -47,3 +53,11 @@ app.include_router(triage_router, prefix="/triage", tags=["Triage"])
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": "patient-routing-system"}
+
+# UI
+TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+@app.get("/", response_class=HTMLResponse)
+async def serve_ui():
+    """Serve the chat interface."""
+    index_path = TEMPLATES_DIR / "index.html"
+    return HTMLResponse(content=index_path.read_text())

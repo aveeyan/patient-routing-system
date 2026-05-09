@@ -12,25 +12,33 @@ from core.constants import Severity
 from schemas.triage import ExtractedSymptoms
 
 
+# triage/decision.py — updated is_sufficient
+
 def is_sufficient(extracted: ExtractedSymptoms, turn_count: int) -> bool:
-    """Check if we have enough data to make a triage decision."""
+    """Check if we have enough data to make a triage decision.
+
+    Guarantees at least one follow-up for non-emergency cases.
+    Emergency cases bypass this entirely via rules.py.
+    """
     if turn_count >= settings.max_conversation_turns:
         return True
 
+    # Never triage on the first message — always ask a follow-up
+    # (Emergency override in pipeline.py skips this check entirely)
+    if turn_count == 1:
+        return False
+
     all_symptoms = extracted.primary_symptoms + extracted.associated_symptoms
-    points = len(all_symptoms)
 
-    if any(s.duration for s in all_symptoms):
-        points += 1
-    if any(s.body_site for s in all_symptoms):
-        points += 1
-    if extracted.confidence >= 0.9 and len(all_symptoms) >= 2:
-        points += 1
-    if all(s.severity == "moderate" for s in all_symptoms):
-            points -= 1
+    # After follow-up: sufficient if any symptom has detail
+    if any(s.duration or s.body_site for s in all_symptoms):
+        return True
 
-    return points >= settings.min_data_points
+    # Or if multiple symptoms are reported
+    if len(all_symptoms) >= 2:
+        return True
 
+    return False
 
 def build_symptoms_summary(extracted: ExtractedSymptoms) -> str:
     """Human-readable summary of what we've extracted so far."""

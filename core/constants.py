@@ -27,7 +27,14 @@ class UrgencyLevel(str, Enum):
 # Departments
 class Department(str, Enum):
     """Hospital departments for patient routing."""
+
+    # 1. Emergency
     EMERGENCY = "emergency"
+
+    # 2. OPD
+    OPD = "opd"
+
+    # 3. Specialists
     CARDIOLOGY = "cardiology"
     DENTAL = "dental"
     ORTHOPEDICS = "orthopedics"
@@ -72,7 +79,6 @@ TRIAGE_DISCLAIMER = (
 
 # List of symptoms
 CRITICAL_SYMPTOMS: set[str] = {
-    "chest_pain",
     "severe_chest_pain",
     "difficulty_breathing",
     "unconscious",
@@ -229,6 +235,7 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "sleep_disordered_breathing": Department.PULMONOLOGY,
     "oxygen_saturation_low": Department.PULMONOLOGY,
     "hyperventilation": Department.PULMONOLOGY,
+
     # Dermatology
     "rash": Department.DERMATOLOGY,
     "skin_rash": Department.DERMATOLOGY,
@@ -365,20 +372,22 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "insect_sting_reaction": Department.ALLERGY_IMMUNOLOGY,
     "immune_deficiency": Department.ALLERGY_IMMUNOLOGY,
 
-    # General Medicine (default fallback)
-    "fever": Department.GENERAL_MEDICINE,
-    "fatigue": Department.GENERAL_MEDICINE,
-    "cold": Department.GENERAL_MEDICINE,
-    "flu": Department.GENERAL_MEDICINE,
-    "body_ache": Department.GENERAL_MEDICINE,
-    "general_weakness": Department.GENERAL_MEDICINE,
-    "malaise": Department.GENERAL_MEDICINE,
-    "dehydration": Department.GENERAL_MEDICINE,
-    "insomnia": Department.GENERAL_MEDICINE,
-    "weight_change": Department.GENERAL_MEDICINE,
+    # General Medicine
     "hypertension": Department.GENERAL_MEDICINE,
     "diabetes_follow_up": Department.GENERAL_MEDICINE,
     "routine_checkup": Department.GENERAL_MEDICINE,
+
+    # OPD (general outpatient)
+    "fever": Department.OPD,
+    "fatigue": Department.OPD,
+    "cold": Department.OPD,
+    "flu": Department.OPD,
+    "body_ache": Department.OPD,
+    "general_weakness": Department.OPD,
+    "malaise": Department.OPD,
+    "dehydration": Department.OPD,
+    "insomnia": Department.OPD,
+    "weight_change": Department.OPD,
 }
 
 # Urgency -> Recommendation Mapping

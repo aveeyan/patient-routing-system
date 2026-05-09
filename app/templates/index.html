@@ -1,0 +1,958 @@
+<!-- app/templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Routing System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+    <style>
+        /* ── DESIGN TOKENS ── */
+        :root {
+            --brand-900: #0a1628;
+            --brand-800: #0f2040;
+            --brand-700: #173059;
+            --brand-500: #1e5fa8;
+            --brand-400: #2e7fd4;
+            --brand-300: #60a5e8;
+            --accent:    #00c896;
+            --warn:      #f59e0b;
+            --danger:    #ef4444;
+            --surface-0: #f4f7fb;
+            --surface-1: #ffffff;
+            --surface-2: #eef2f8;
+            --border:    #dde4ef;
+            --text-1:    #0d1f3c;
+            --text-2:    #4a5a78;
+            --text-3:    #8494b0;
+            --radius-xl: 1.25rem;
+            --radius-lg: 0.875rem;
+            --radius-md: 0.625rem;
+            --shadow-card: 0 2px 16px rgba(10,22,40,.08), 0 1px 3px rgba(10,22,40,.06);
+            --shadow-msg:  0 1px 4px rgba(10,22,40,.1);
+            --sidebar-w:   340px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--surface-0);
+            color: var(--text-1);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ────────────────────────────────────────
+           TOPBAR
+        ──────────────────────────────────────── */
+        .topbar {
+            background: var(--brand-900);
+            height: 60px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.25rem;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            gap: .75rem;
+        }
+        .btn-sidebar-toggle {
+            width: 34px; height: 34px;
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: var(--radius-md);
+            color: rgba(255,255,255,.7);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background .2s, color .2s;
+            flex-shrink: 0;
+        }
+        .btn-sidebar-toggle:hover  { background: rgba(255,255,255,.15); color: #fff; }
+        .btn-sidebar-toggle.active { background: var(--brand-500); border-color: var(--brand-400); color: #fff; }
+
+        .topbar-brand {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.1rem;
+            color: #fff;
+            letter-spacing: -.01em;
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            background: rgba(255,255,255,.07);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 2rem;
+            padding: .25rem .75rem;
+            font-size: .75rem;
+            color: rgba(255,255,255,.75);
+            transition: all .3s;
+            white-space: nowrap;
+        }
+        .status-pill .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            flex-shrink: 0;
+        }
+        .status-pill.analyzing .dot { background: var(--warn); animation: pulse-warn 1s infinite; }
+        .status-pill.complete  .dot { background: var(--brand-300); }
+
+        @keyframes pulse-warn {
+            0%,100% { opacity: 1; transform: scale(1); }
+            50%      { opacity: .5; transform: scale(1.4); }
+        }
+        .btn-new {
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.15);
+            color: rgba(255,255,255,.85);
+            font-size: .8rem;
+            padding: .35rem .85rem;
+            border-radius: var(--radius-md);
+            transition: all .2s;
+            display: flex; align-items: center; gap: .35rem;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .btn-new:hover { background: rgba(255,255,255,.14); color: #fff; }
+
+        /* ────────────────────────────────────────
+           LAYOUT
+        ──────────────────────────────────────── */
+        .app-layout {
+            display: flex;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+        }
+
+        /* ────────────────────────────────────────
+           SIDEBAR
+        ──────────────────────────────────────── */
+        .sidebar {
+            width: var(--sidebar-w);
+            min-width: var(--sidebar-w);
+            background: var(--surface-1);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width .28s ease, min-width .28s ease, opacity .25s ease;
+        }
+        .sidebar.collapsed {
+            width: 0;
+            min-width: 0;
+            opacity: 0;
+            pointer-events: none;
+            border-right: none;
+        }
+        .sidebar-header {
+            padding: .875rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .sidebar-title {
+            font-size: .65rem;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--text-3);
+            white-space: nowrap;
+        }
+        .sidebar-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 2rem .5rem;
+        }
+        .empty-icon-wrap {
+            width: 60px; height: 60px;
+            background: var(--surface-2);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-3);
+            font-size: 1.4rem;
+            margin-bottom: .875rem;
+            border: 1px solid var(--border);
+        }
+        .step-list {
+            width: 100%;
+            margin-top: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: .4rem;
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: .65rem;
+            padding: .65rem .875rem;
+            background: var(--surface-2);
+            border-radius: var(--radius-md);
+            font-size: .82rem;
+            color: var(--text-2);
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .step-num {
+            width: 20px; height: 20px; min-width: 20px;
+            border-radius: 50%;
+            background: var(--brand-500);
+            color: #fff;
+            font-size: .68rem;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            margin-top: 1px;
+        }
+
+        /* Panel section label (shared) */
+        .panel-section-label {
+            font-size: .65rem;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--text-3);
+            margin-bottom: .75rem;
+        }
+
+        /* ── SYMPTOM TABLE ── */
+        .symptom-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            font-size: .82rem;
+            margin-bottom: 1rem;
+        }
+        .symptom-table thead tr { background: var(--surface-2); }
+        .symptom-table thead th {
+            padding: .5rem .75rem;
+            font-size: .64rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--text-3);
+            border-bottom: 1px solid var(--border);
+        }
+        .symptom-table tbody tr { background: var(--surface-1); transition: background .15s; }
+        .symptom-table tbody tr:nth-child(even) { background: var(--surface-2); }
+        .symptom-table tbody tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
+        .symptom-table tbody tr:hover { background: var(--brand-100); }
+        .symptom-table td {
+            padding: .55rem .75rem;
+            color: var(--text-2);
+            vertical-align: middle;
+        }
+        .symptom-table td:first-child { color: var(--text-1); font-weight: 500; }
+
+        .sev-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            border-radius: 2rem;
+            padding: .18rem .55rem;
+            font-size: .7rem;
+            font-weight: 600;
+            border: 1.5px solid;
+        }
+        .sev-severe   { background: #fff1f1; color: var(--danger);  border-color: #fecaca; }
+        .sev-moderate { background: #fffbeb; color: #b45309;        border-color: #fde68a; }
+        .sev-mild     { background: #f0fdf4; color: #15803d;        border-color: #bbf7d0; }
+
+        .type-badge { font-size: .68rem; font-weight: 600; color: var(--text-3); }
+
+        .assessing-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: .8rem 1rem;
+        }
+        .assessing-label {
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+            color: var(--brand-400);
+            margin-bottom: .3rem;
+        }
+
+        /* ── RESULT CARD & DETAIL TABLE ── */
+        .result-card {
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            border: 1.5px solid var(--border);
+            box-shadow: var(--shadow-card);
+        }
+        .result-header {
+            padding: .875rem 1.125rem;
+            display: flex; align-items: center; gap: .65rem;
+        }
+        .result-header-icon {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .result-header-text h6 { font-size: .85rem; font-weight: 700; margin: 0; }
+        .result-header-text small { font-size: .72rem; opacity: .75; }
+
+        .result-body   { padding: 1rem 1.125rem; background: var(--surface-1); }
+        .result-footer {
+            background: var(--surface-2);
+            padding: .65rem 1.125rem;
+            font-size: .72rem;
+            color: var(--text-3);
+            display: flex; align-items: center; gap: .4rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Urgency colour themes */
+        .urg-emergency .result-header       { background: #fef2f2; color: var(--danger); }
+        .urg-emergency .result-header-icon  { background: #fee2e2; color: var(--danger); }
+        .urg-urgent    .result-header       { background: #fffbeb; color: #b45309; }
+        .urg-urgent    .result-header-icon  { background: #fef3c7; color: #b45309; }
+        .urg-routine   .result-header       { background: #f0fdf4; color: #15803d; }
+        .urg-routine   .result-header-icon  { background: #dcfce7; color: #15803d; }
+
+        /* detail table inside result card */
+        .detail-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            font-size: .82rem;
+            margin-top: 1rem;
+        }
+        .detail-table tr                             { background: var(--surface-1); }
+        .detail-table tr:nth-child(even)             { background: var(--surface-2); }
+        .detail-table tr:not(:last-child) td         { border-bottom: 1px solid var(--border); }
+        .detail-table td                             { padding: .5rem .75rem; vertical-align: top; }
+        .detail-table td:first-child                 { font-weight: 600; color: var(--text-1); width: 40%; white-space: nowrap; }
+        .detail-table td:last-child                  { color: var(--text-2); }
+
+        .urgency-chip {
+            display: inline-flex; align-items: center; gap: .35rem;
+            border-radius: 2rem; padding: .3rem .8rem;
+            font-size: .78rem; font-weight: 600; border: 1.5px solid;
+        }
+        .chip-emergency { background: #fff1f1; color: var(--danger);  border-color: #fecaca; }
+        .chip-urgent    { background: #fffbeb; color: #b45309;        border-color: #fde68a; }
+        .chip-routine   { background: #f0fdf4; color: #15803d;        border-color: #bbf7d0; }
+
+        .service-badge {
+            display: inline-flex; align-items: center; gap: .35rem;
+            background: var(--brand-900); color: rgba(255,255,255,.9);
+            border-radius: var(--radius-md); padding: .3rem .8rem;
+            font-size: .78rem; font-weight: 600;
+        }
+
+        /* ────────────────────────────────────────
+           CHAT AREA
+        ──────────────────────────────────────── */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--surface-0);
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        /* Hero */
+        .chat-hero {
+            padding: 1.125rem 1.75rem;
+            background: linear-gradient(135deg, var(--brand-900) 0%, var(--brand-700) 100%);
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            display: flex; align-items: center; gap: 1rem;
+            flex-shrink: 0;
+        }
+        .hero-avatar {
+            width: 46px; height: 46px; min-width: 46px;
+            background: rgba(255,255,255,.1);
+            border-radius: var(--radius-lg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: var(--accent);
+            border: 1px solid rgba(255,255,255,.1);
+        }
+        .hero-text h5 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1rem; color: #fff; margin: 0 0 .15rem;
+        }
+        .hero-text p { font-size: .8rem; color: var(--brand-300); margin: 0; opacity: .85; }
+        .hero-disclaimer {
+            margin-left: auto; font-size: .67rem; color: var(--brand-300);
+            letter-spacing: .05em; text-transform: uppercase; font-weight: 600;
+            opacity: .6; text-align: right; white-space: nowrap;
+        }
+
+        /* ── MESSAGES ── */
+        .messages {
+            flex: 1; overflow-y: auto;
+            padding: 1.75rem 2rem;
+            display: flex; flex-direction: column; gap: 1.25rem;
+            scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+        }
+
+        /*
+         * FIX 1 – avatar alignment
+         * align-items: flex-start  → avatar pins to TOP of the row,
+         * not the vertical centre. margin-top: 22px offsets it below
+         * the sender label so icon sits beside the bubble text, not
+         * beside the label.
+         */
+        .msg-row {
+            display: flex;
+            align-items: flex-start;
+            gap: .75rem;
+            animation: msg-in .22s ease both;
+        }
+        .msg-row.user { flex-direction: row-reverse; }
+
+        .msg-avatar {
+            width: 36px; height: 36px; min-width: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .875rem;
+            flex-shrink: 0;
+            margin-top: 22px;   /* align with bubble top, not sender label */
+        }
+        .bot-avatar  { background: var(--brand-800); color: var(--brand-300); border: 1px solid var(--border); }
+        .user-avatar { background: var(--brand-500); color: #fff; }
+
+        .msg-body { max-width: 72%; display: flex; flex-direction: column; }
+        .msg-row.user .msg-body { align-items: flex-end; }
+
+        .msg-sender {
+            font-size: .67rem; font-weight: 700;
+            letter-spacing: .05em; text-transform: uppercase;
+            color: var(--text-3); margin-bottom: .3rem;
+        }
+
+        /* FIX 2 – larger bubbles */
+        .msg-bubble {
+            padding: .9rem 1.15rem;
+            border-radius: var(--radius-lg);
+            font-size: 1rem;        /* was .875rem */
+            line-height: 1.65;
+            box-shadow: var(--shadow-msg);
+        }
+        .bot-bubble  { background: var(--surface-1); color: var(--text-1); border: 1px solid var(--border); border-top-left-radius: 4px; }
+        .user-bubble { background: var(--brand-500); color: #fff; border-top-right-radius: 4px; }
+
+        .msg-time { font-size: .63rem; color: var(--text-3); margin-top: .3rem; }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex; align-items: center; gap: .5rem;
+            padding: .65rem 1rem;
+            background: var(--surface-1); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); border-top-left-radius: 4px;
+            width: fit-content; box-shadow: var(--shadow-msg);
+        }
+        .typing-dots { display: flex; gap: 4px; align-items: center; }
+        .typing-dots span {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--text-3);
+            animation: dot-bounce .9s infinite ease-in-out;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: .15s; }
+        .typing-dots span:nth-child(3) { animation-delay: .30s; }
+        @keyframes dot-bounce {
+            0%,80%,100% { transform: translateY(0);   opacity: .45; }
+            40%          { transform: translateY(-5px); opacity: 1;   }
+        }
+        .typing-label { font-size: .75rem; color: var(--text-3); }
+
+        /* ── INPUT ── */
+        .chat-input-area {
+            padding: 1rem 2rem 1.25rem;
+            background: var(--surface-1);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .input-wrap {
+            display: flex; align-items: center;
+            background: var(--surface-0);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: .4rem .4rem .4rem 1.25rem;
+            gap: .5rem;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .input-wrap:focus-within {
+            border-color: var(--brand-400);
+            box-shadow: 0 0 0 3px rgba(46,127,212,.12);
+        }
+        .input-wrap input {
+            flex: 1; border: none; background: transparent;
+            font-size: .975rem; color: var(--text-1); outline: none;
+            font-family: 'DM Sans', sans-serif; line-height: 1.5; padding: .35rem 0;
+        }
+        .input-wrap input::placeholder { color: var(--text-3); }
+        .input-wrap input:disabled     { opacity: .5; cursor: not-allowed; }
+
+        .send-btn {
+            width: 42px; height: 42px; border-radius: 50%;
+            background: var(--brand-500); border: none; color: #fff;
+            font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0;
+            transition: background .2s, transform .12s;
+        }
+        .send-btn:hover:not(:disabled)  { background: var(--brand-400); transform: scale(1.05); }
+        .send-btn:active:not(:disabled) { transform: scale(.95); }
+        .send-btn:disabled              { background: var(--border); color: var(--text-3); cursor: not-allowed; }
+
+        .input-hint { font-size: .7rem; color: var(--text-3); text-align: right; margin-top: .45rem; }
+        .input-hint kbd {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 3px; padding: .05rem .3rem; font-size: .65rem;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 991.98px) {
+            .sidebar, .btn-sidebar-toggle { display: none !important; }
+        }
+        @media (max-width: 767.98px) {
+            .messages { padding: 1rem 1.25rem; }
+            .chat-input-area { padding: .75rem 1.25rem 1rem; }
+            .chat-hero { padding: .875rem 1.25rem; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        @keyframes msg-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── TOPBAR ── -->
+    <div class="topbar">
+        <button class="btn-sidebar-toggle active" id="sidebarToggleBtn"
+                onclick="toggleSidebar()" title="Toggle Assessment Panel">
+            <i class="bi bi-layout-sidebar"></i>
+        </button>
+        <a class="topbar-brand" href="#">
+            <i class="bi bi-heart-pulse-fill text-danger"></i>
+            Patient Routing System
+        </a>
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <span class="status-pill" id="statusPill">
+                <span class="dot"></span>
+                <span id="statusText">Ready</span>
+            </span>
+            <button class="btn-new" onclick="resetAssessment()">
+                <i class="bi bi-arrow-repeat"></i> New Session
+            </button>
+        </div>
+    </div>
+
+    <!-- ── APP LAYOUT ── -->
+    <div class="app-layout">
+
+        <!-- SIDEBAR -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title"><i class="bi bi-activity me-1"></i>Assessment Panel</span>
+            </div>
+            <div class="sidebar-body">
+
+                <!-- Empty state -->
+                <div id="sidebarEmpty">
+                    <div class="empty-state">
+                        <div class="empty-icon-wrap">
+                            <i class="bi bi-clipboard2-pulse"></i>
+                        </div>
+                        <p class="text-muted mb-0" style="font-size:.84rem;">
+                            Your symptom analysis and triage result will appear here as you chat.
+                        </p>
+                        <div class="step-list">
+                            <div class="step-item">
+                                <div class="step-num">1</div>
+                                <div>Describe your symptoms in your own words</div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-num">2</div>
+                                <div>Answer the assistant's follow-up questions</div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-num">3</div>
+                                <div>Receive your personalised care recommendation</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live analysis (while assessing) -->
+                <div id="analysisPanel" class="d-none">
+                    <div class="panel-section-label"><i class="bi bi-search me-1"></i>Detected Symptoms</div>
+                    <div id="symptomsContainer"></div>
+                    <div class="assessing-card">
+                        <div class="assessing-label"><i class="bi bi-hourglass-split me-1"></i>Still Assessing</div>
+                        <p class="mb-0 text-muted" style="font-size:.82rem;" id="missingHint">Gathering more details…</p>
+                    </div>
+                </div>
+
+                <!-- Triage result (on completion) -->
+                <div id="resultPanel" class="d-none"></div>
+
+            </div>
+        </div>
+
+        <!-- CHAT AREA -->
+        <div class="chat-area">
+
+            <!-- Hero banner -->
+            <div class="chat-hero" id="welcomeBanner">
+                <div class="hero-avatar"><i class="bi bi-robot"></i></div>
+                <div class="hero-text">
+                    <h5>Patient Routing System</h5>
+                    <p>Describe your symptoms clearly. I'll ask follow-up questions and route you to the right care.</p>
+                </div>
+                <span class="hero-disclaimer d-none d-md-block">AI-Assisted · Not a Diagnosis</span>
+            </div>
+
+            <!-- Messages list -->
+            <div class="messages" id="chatMessages"></div>
+
+            <!-- Typing indicator (structurally matches a bot message row) -->
+            <div id="typingRow" class="d-none" style="padding: 0 2rem .5rem;">
+                <div class="msg-row">
+                    <div class="msg-avatar bot-avatar" style="margin-top:22px;">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-sender">Assistant</div>
+                        <div class="typing-indicator">
+                            <div class="typing-dots">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <span class="typing-label">Assessing…</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message input -->
+            <div class="chat-input-area">
+                <div class="input-wrap">
+                    <input type="text" id="messageInput"
+                           placeholder="Describe your symptoms or answer the question above…"
+                           autocomplete="off" autofocus>
+                    <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+                        <i class="bi bi-send-fill" style="font-size:.85rem; margin-left:2px;"></i>
+                    </button>
+                </div>
+                <div class="input-hint">Press <kbd>Enter</kbd> to send</div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let sessionId   = null;
+        let isComplete  = false;
+        let sidebarOpen = true;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('messageInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+            });
+            startSession();
+        });
+
+        /* ── Sidebar toggle ── */
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            const sidebar = document.getElementById('sidebar');
+            const btn     = document.getElementById('sidebarToggleBtn');
+            sidebar.classList.toggle('collapsed', !sidebarOpen);
+            btn.classList.toggle('active', sidebarOpen);
+        }
+
+        /* ── Session start ── */
+        async function startSession() {
+            try {
+                const res  = await fetch('/triage/start', { method: 'POST' });
+                const data = await res.json();
+                sessionId  = data.session_id;
+                addMessage('bot', data.message);
+                setStatus('listening');
+            } catch {
+                addMessage('bot', 'Unable to connect to the server. Please refresh the page.');
+            }
+        }
+
+        /* ── Send message ── */
+        async function sendMessage() {
+            if (isComplete) return;
+            const input = document.getElementById('messageInput');
+            const text  = input.value.trim();
+            if (!text || !sessionId) return;
+
+            addMessage('user', text);
+            input.value = '';
+            toggleTyping(true);
+            toggleInput(false);
+            setStatus('analyzing');
+
+            try {
+                const res  = await fetch('/triage/message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId, message: text }),
+                });
+                const data = await res.json();
+                toggleTyping(false);
+
+                if (data.state === 'completed') {
+                    addTriageMessage(data);
+                    showResult(data);
+                    isComplete = true;
+                    toggleInput(false);
+                    setStatus('complete');
+                    document.getElementById('welcomeBanner').classList.add('d-none');
+                } else {
+                    addMessage('bot', data.bot_message);
+                    updateAnalysis(data.extracted_so_far);
+                    toggleInput(true);
+                    setStatus('listening');
+                }
+            } catch {
+                toggleTyping(false);
+                toggleInput(true);
+                addMessage('bot', 'Something went wrong. Please try again.');
+                setStatus('listening');
+            }
+        }
+
+        /* ── Add chat message ── */
+        function addMessage(role, text) {
+            const container  = document.getElementById('chatMessages');
+            const row        = document.createElement('div');
+            row.className    = `msg-row${role === 'user' ? ' user' : ''}`;
+            const avatarIcon = role === 'bot'  ? 'bi-robot'       : 'bi-person-fill';
+            const avatarCls  = role === 'bot'  ? 'bot-avatar'     : 'user-avatar';
+            const bubbleCls  = role === 'bot'  ? 'bot-bubble'     : 'user-bubble';
+            const sender     = role === 'bot'  ? 'Assistant'      : 'You';
+            row.innerHTML = `
+                <div class="msg-avatar ${avatarCls}"><i class="bi ${avatarIcon}"></i></div>
+                <div class="msg-body">
+                    <div class="msg-sender">${sender}</div>
+                    <div class="msg-bubble ${bubbleCls}">${escapeHtml(text).replace(/\n/g,'<br>')}</div>
+                    <div class="msg-time">${timeNow()}</div>
+                </div>`;
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addTriageMessage(data) {
+            const container  = document.getElementById('chatMessages');
+            const row        = document.createElement('div');
+            row.className    = 'msg-row';
+            const t = data.triage;
+            const e = data.encounter_summary;
+
+            // urgency colour config
+            const cfg = {
+                emergency: { icon:'bi-exclamation-triangle-fill', chip:'chip-emergency', label:'Emergency' },
+                urgent:    { icon:'bi-exclamation-circle-fill',   chip:'chip-urgent',    label:'Urgent'    },
+                routine:   { icon:'bi-check-circle-fill',         chip:'chip-routine',   label:'Routine'   },
+            }[t.urgency] || { icon:'bi-check-circle-fill', chip:'chip-routine', label:'Routine' };
+
+            row.innerHTML = `
+                <div class="msg-avatar bot-avatar" style="margin-top:22px;">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <div class="msg-body">
+                    <div class="msg-sender">Assistant</div>
+                    <div class="msg-bubble bot-bubble" style="border-left: 4px solid var(--${t.urgency === 'emergency' ? 'danger' : t.urgency === 'urgent' ? 'warn' : 'accent'});">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span class="urgency-chip ${cfg.chip}">
+                                <i class="bi ${cfg.icon}" style="font-size:.7rem;"></i>${cfg.label}
+                            </span>
+                            <span class="service-badge">
+                                <i class="bi bi-hospital"></i>${e.service_type.replace(/_/g,' ')}
+                            </span>
+                        </div>
+                        <p style="font-size:.9rem; color:var(--text-2); margin-bottom:.8rem; line-height:1.6;">
+                            ${t.recommendation}
+                        </p>
+                        <div style="font-size:.75rem; color:var(--text-3); border-top:1px solid var(--border); padding-top:.6rem;">
+                            <i class="bi bi-shield-check me-1"></i>${t.disclaimer}
+                        </div>
+                    </div>
+                    <div class="msg-time">${timeNow()}</div>
+                </div>`;
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function toggleTyping(show) {
+            document.getElementById('typingRow').classList.toggle('d-none', !show);
+            document.getElementById('chatMessages').scrollTop = 99999;
+        }
+
+        function toggleInput(enabled) {
+            document.getElementById('messageInput').disabled = !enabled;
+            document.getElementById('sendBtn').disabled      = !enabled;
+            if (enabled) document.getElementById('messageInput').focus();
+        }
+
+        function setStatus(state) {
+            const pill = document.getElementById('statusPill');
+            const text = document.getElementById('statusText');
+            pill.className = 'status-pill';
+            if      (state === 'analyzing') { pill.classList.add('analyzing'); text.textContent = 'Analyzing'; }
+            else if (state === 'complete')  { pill.classList.add('complete');  text.textContent = 'Complete';  }
+            else                            {                                   text.textContent = 'Listening'; }
+        }
+
+        /* ── Sidebar: symptom table ── */
+        function updateAnalysis(extracted) {
+            if (!extracted) return;
+            document.getElementById('sidebarEmpty').classList.add('d-none');
+            document.getElementById('resultPanel').classList.add('d-none');
+            document.getElementById('analysisPanel').classList.remove('d-none');
+
+            const primary    = (extracted.primary_symptoms    || []).map(s => ({ ...s, kind: 'Primary' }));
+            const associated = (extracted.associated_symptoms || []).map(s => ({ ...s, kind: 'Associated' }));
+            const all        = [...primary, ...associated];
+            const container  = document.getElementById('symptomsContainer');
+
+            if (all.length === 0) {
+                container.innerHTML = `<p class="text-muted mb-3" style="font-size:.82rem;">
+                    No symptoms identified yet — keep describing your condition.</p>`;
+            } else {
+                const rows = all.map(s => {
+                    const sevCls  = s.severity === 'severe' ? 'sev-severe'
+                                  : s.severity === 'mild'   ? 'sev-mild'
+                                  :                           'sev-moderate';
+                    const sevIcon = s.severity === 'severe' ? 'bi-exclamation-triangle-fill'
+                                  : s.severity === 'mild'   ? 'bi-check-circle-fill'
+                                  :                           'bi-dash-circle-fill';
+                    return `<tr>
+                        <td>${s.name.replace(/_/g,' ')}</td>
+                        <td><span class="sev-badge ${sevCls}">
+                            <i class="bi ${sevIcon}" style="font-size:.6rem;"></i>${s.severity}
+                        </span></td>
+                        <td><span class="type-badge">${s.kind}</span></td>
+                    </tr>`;
+                }).join('');
+                container.innerHTML = `
+                    <table class="symptom-table">
+                        <thead><tr><th>Symptom</th><th>Severity</th><th>Type</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>`;
+            }
+
+            document.getElementById('missingHint').textContent = all.length === 0
+                ? 'Please describe what you are experiencing.'
+                : 'Asking targeted follow-up questions to complete the assessment…';
+        }
+
+        /* ── Sidebar: triage result ── */
+        function showResult(data) {
+            document.getElementById('sidebarEmpty').classList.add('d-none');
+            document.getElementById('analysisPanel').classList.add('d-none');
+            const panel = document.getElementById('resultPanel');
+            panel.classList.remove('d-none');
+
+            const t   = data.triage;
+            const e   = data.encounter_summary;
+            const cfg = {
+                emergency: { label:'Emergency', sub:'Seek care immediately',      icon:'bi-exclamation-triangle-fill', chip:'chip-emergency' },
+                urgent:    { label:'Urgent',    sub:'Same-day visit recommended', icon:'bi-exclamation-circle-fill',   chip:'chip-urgent'    },
+                routine:   { label:'Routine',   sub:'Schedule an appointment',    icon:'bi-check-circle-fill',         chip:'chip-routine'   },
+            }[t.urgency] || { label:'Routine', sub:'Schedule an appointment', icon:'bi-check-circle-fill', chip:'chip-routine' };
+
+            const symptomsText = e.extracted_symptoms.map(s => s.replace(/_/g,' ')).join(', ');
+
+            panel.innerHTML = `
+                <div class="result-card urg-${t.urgency}">
+                    <div class="result-header">
+                        <div class="result-header-icon"><i class="bi ${cfg.icon}"></i></div>
+                        <div class="result-header-text">
+                            <h6>${cfg.label}</h6>
+                            <small>${cfg.sub}</small>
+                        </div>
+                    </div>
+                    <div class="result-body">
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="urgency-chip ${cfg.chip}">
+                                <i class="bi ${cfg.icon}" style="font-size:.7rem;"></i>${cfg.label}
+                            </span>
+                            <span class="service-badge">
+                                <i class="bi bi-hospital"></i>${e.service_type.replace(/_/g,' ')}
+                            </span>
+                        </div>
+                        <p style="font-size:.85rem;color:var(--text-2);line-height:1.65;" class="mb-0">
+                            ${t.recommendation}
+                        </p>
+                        <table class="detail-table">
+                            <tr><td>Chief Complaint</td><td>${e.chief_complaint}</td></tr>
+                            <tr><td>Severity</td><td style="text-transform:capitalize;">${t.severity}</td></tr>
+                            <tr><td>Symptoms</td><td>${symptomsText}</td></tr>
+                            <tr><td>Exchanges</td><td>${e.conversation_turns}</td></tr>
+                        </table>
+                    </div>
+                    <div class="result-footer">
+                        <i class="bi bi-shield-check"></i>
+                        AI-assisted triage · Not a medical diagnosis
+                    </div>
+                </div>`;
+        }
+
+        /* ── Reset ── */
+        function resetAssessment() {
+            sessionId  = null;
+            isComplete = false;
+            document.getElementById('chatMessages').innerHTML = '';
+            document.getElementById('sidebarEmpty').classList.remove('d-none');
+            document.getElementById('analysisPanel').classList.add('d-none');
+            document.getElementById('resultPanel').classList.add('d-none');
+            document.getElementById('welcomeBanner').classList.remove('d-none');
+            document.getElementById('messageInput').value = '';
+            toggleInput(true);
+            setStatus('listening');
+            startSession();
+        }
+
+        function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+        function timeNow()     { return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
+    </script>
+</body>
+</html>
