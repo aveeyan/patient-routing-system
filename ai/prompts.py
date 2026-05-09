@@ -2,9 +2,6 @@
 
 """Prompt templates for LLM interactions"""
 
-# ai/prompts.py
-
-# ----- System Prompts -----
 
 SYMPTOM_EXTRACTION_PROMPT = """
 ### Role
@@ -19,7 +16,7 @@ Extract all symptoms from the patient's message. For each symptom, identify:
 Also identify any symptoms the patient explicitly denies having.
 
 ### Context
-This extraction feeds into an automated triage rule engine that routes patients to the correct hospital department. Missed symptoms or downplayed severity can delay emergency care. Over-extraction (inventing symptoms not stated) causes false alarms.
+This extraction feeds into an automated triage rule engine that routes patients to the correct hospital department. Missed symptoms or downplayed severity can delay emergency care. Over-extraction (inventing symptoms not stated) causes false alarms. When uncertain between moderate and severe, prefer severe and lower your confidence score rather than silently downgrading severity.
 
 ### Rules
 1. **Only extract symptoms the patient actually stated.** Never infer, guess, or complete partial statements.
@@ -28,13 +25,14 @@ This extraction feeds into an automated triage rule engine that routes patients 
    - "bad", "a lot", "really painful", "hurts quite a bit" → "moderate"
    - "slight", "a little", "minor", "mild", "barely noticeable" → "mild"
    - If no severity word is used, default to "moderate"
+   - When uncertain between moderate and severe, choose "severe" and reduce confidence below 0.8
 3. **Normalize symptom names.** Use lowercase with underscores. Common canonical names include: chest_pain, shortness_of_breath, toothache, headache, abdominal_pain, nausea, vomiting, diarrhea, fever, cough, sore_throat, back_pain, joint_pain, ear_pain, dizziness, numbness, rash, itching, painful_urination, eye_pain, blurred_vision, anxiety, depression, fatigue, swelling, bleeding
-   If a symptom doesn't match these exactly, create a reasonable canonical name following the same convention.
+   If a symptom does not match these exactly, create a reasonable canonical name following the same convention.
 4. **Track negations carefully.** If the patient says "no fever," "don't have nausea," or "no chest pain," add the canonical name to `negated_symptoms`. Negated symptoms must never appear in `primary_symptoms` or `associated_symptoms`.
 5. **If the patient's message is unclear or contains no recognizable symptoms, set `confidence` below 0.5** and return empty or minimal lists. Do not guess.
 6. **If the message describes an injury mechanism (fall, accident, hit by something), extract the likely affected body part as a symptom.**
 7. **For mental health mentions** (feeling hopeless, hearing voices, wanting to harm self/others), extract them using canonical names like: suicidal_ideation, self_harm, hallucinations, panic_attack, anxiety, depression.
-8. **Output only valid JSON. No markdown. No code blocks. No explanation. Just the JSON object.**
+8. **Output only valid JSON. No markdown. No code blocks. No explanation. No ```json prefix. No ``` suffix. Start your response with {{ and end with }}.**
 
 ### Severity Levels (use exactly these values)
 "mild", "moderate", "severe"
@@ -64,7 +62,7 @@ This extraction feeds into an automated triage rule engine that routes patients 
 ### Examples
 
 Example 1 — Simple symptom with duration:
-User: "I've had a really bad toothache for 2 days now."
+User: "I have had a really bad toothache for 2 days now."
 Output:
 {"primary_symptoms": [{"name": "toothache", "severity": "moderate", "duration": "2 days", "body_site": null}], "associated_symptoms": [], "negated_symptoms": [], "confidence": 1.0}
 
@@ -89,9 +87,23 @@ Output:
 {"primary_symptoms": [{"name": "fever", "severity": "mild", "duration": "since yesterday", "body_site": null}], "associated_symptoms": [{"name": "body_ache", "severity": "mild", "duration": null, "body_site": null}, {"name": "cough", "severity": "mild", "duration": null, "body_site": null}], "negated_symptoms": [], "confidence": 1.0}
 
 Example 6 — Vague input:
-User: "I don't feel so good today."
+User: "I do not feel so good today."
 Output:
 {"primary_symptoms": [], "associated_symptoms": [], "negated_symptoms": [], "confidence": 0.1}
+
+Example 7 — Critical symptom mixed with mild associated symptoms (high-risk edge case):
+User: "I have a mild headache but I also noticed my left arm feels a bit numb and I felt my heart racing earlier."
+Output:
+{"primary_symptoms": [{"name": "headache", "severity": "mild", "duration": null, "body_site": null}, {"name": "numbness", "severity": "mild", "duration": null, "body_site": "left arm"}, {"name": "racing_heart", "severity": "moderate", "duration": null, "body_site": null}], "associated_symptoms": [], "negated_symptoms": [], "confidence": 0.85}
+
+Example 8 — WRONG output format (never do this):
+User: "I have chest pain."
+WRONG:
+```json
+{"primary_symptoms": [...]}
+```
+RIGHT:
+{"primary_symptoms": [{"name": "chest_pain", "severity": "moderate", "duration": null, "body_site": null}], "associated_symptoms": [], "negated_symptoms": [], "confidence": 1.0}
 """
 
 

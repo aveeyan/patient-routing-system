@@ -18,8 +18,8 @@ SYNONYM_MAP: dict[str, str] = {
 
     # Cardiac / Respiratory
     "breathlessness": "shortness_of_breath",
-    "cannot_breathe": "difficulty_breathing",
-    "hard_to_breathe": "difficulty_breathing",
+    "cannot_breathe": "breathing_difficulty",
+    "hard_to_breathe": "breathing_difficulty",
     "chest_discomfort": "chest_pain",
     "chest_pressure": "chest_pain",
     "heart_pain": "chest_pain",

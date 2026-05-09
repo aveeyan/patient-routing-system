@@ -27,10 +27,14 @@ _EXTRACTION_MAX_TOKENS = 384
 # Follow-up produces a single question; 128 tokens is more than enough.
 _FOLLOW_UP_MAX_TOKENS = 128
 
-# Confidence floor for successful parses that pass validation.
-_DEFAULT_CONFIDENCE = 0.0
+## Confidence Constants
+# Returned when extraction fails entirely (parse error, API error).
+_FAILED_CONFIDENCE = 0.0
+# Threshold below which low_confidence_reason must be populated.
+# Must match the threshold documented in ExtractedSymptoms.low_confidence_reason.
+_LOW_CONFIDENCE_THRESHOLD = 0.7
 
-# Maximum conversation history turns to include as context.
+## Maximum conversation history turns to include as context.
 _MAX_HISTORY_TURNS = 6
 
 
@@ -60,7 +64,7 @@ async def extract_symptoms(
 
     logger.info(
         "Extracting symptoms",
-        message_preview=user_message[:100],
+        message_length=len(user_message),
         has_history=conversation_history is not None,
     )
 
@@ -88,11 +92,11 @@ async def extract_symptoms(
         logger.error(
             "Extraction failed, returning empty result",
             error=str(exc),
-            message_preview=user_message[:100],
+            message_length=len(user_message),
         )
         return ExtractedSymptoms(
             raw_text=user_message,
-            confidence=_DEFAULT_CONFIDENCE,
+            confidence=_FAILED_CONFIDENCE,
             low_confidence_reason=f"Extraction error: {exc}",
         )
 
@@ -109,7 +113,7 @@ async def generate_follow_up(
     natural-language question.
 
     Args:
-        symptoms_summary: Human-readable summary of what we've extracted.
+        symptoms_summary: Human-readable summary of what we have extracted.
         missing_info: Description of what information is still needed.
         negated_symptoms: Canonical names of symptoms already denied.
 
@@ -118,30 +122,33 @@ async def generate_follow_up(
     """
     negated_str = ", ".join(negated_symptoms) if negated_symptoms else "(none)"
 
-    prompt = FOLLOW_UP_PROMPT.format(
-        symptoms_summary=symptoms_summary,
-        missing_info=missing_info,
-        negated_symptoms=negated_str,
-    )
+    try:
+        prompt = FOLLOW_UP_PROMPT.format(
+            symptoms_summary=symptoms_summary,
+            missing_info=missing_info,
+            negated_symptoms=negated_str,
+        )
+    except KeyError as exc:
+        logger.error("FOLLOW_UP_PROMPT format key missing", key=str(exc))
+        return "Could you tell me more about what you are experiencing?"
 
     logger.info("Generating follow-up question")
 
     try:
         question = await generate_response(
             system_prompt=prompt,
-            user_message="Generate the follow-up question.",
+            user_message=f"Patient symptoms: {symptoms_summary}\nMissing information: {missing_info}",
             max_tokens=_FOLLOW_UP_MAX_TOKENS,
         )
 
-        # Clean up: strip quotes, whitespace, any stray formatting
         question = question.strip().strip('"').strip("'")
 
-        logger.info("Follow-up generated", question=question)
+        logger.info("Follow-up generated", question_length=len(question))
         return question
 
     except Exception as exc:
         logger.error("Follow-up generation failed, using fallback", error=str(exc))
-        return "Could you tell me more about what you're experiencing?"
+        return "Could you tell me more about what you are experiencing?"
 
 
 ## Private Helpers — Input Construction
@@ -154,8 +161,8 @@ def _build_extraction_input(
     """Build the full input string for the extraction prompt.
 
     Prepends recent conversation history so the LLM has context about
-    what was already discussed. This prevents re-extracting resolved
-    symptoms and helps the LLM understand follow-up responses.
+    what was already discussed. Truncates to _MAX_HISTORY_TURNS and logs
+    when truncation occurs.
 
     Args:
         user_message: The latest patient message.
@@ -166,6 +173,14 @@ def _build_extraction_input(
     """
     if not conversation_history:
         return f"User Message: {user_message}"
+
+    total_turns = len(conversation_history)
+    if total_turns > _MAX_HISTORY_TURNS:
+        logger.debug(
+            "Conversation history truncated for extraction context",
+            total_turns=total_turns,
+            included_turns=_MAX_HISTORY_TURNS,
+        )
 
     history_lines: list[str] = []
     for turn in conversation_history[-_MAX_HISTORY_TURNS:]:
@@ -218,7 +233,7 @@ def _parse_json_response(raw: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    logger.error("Could not parse LLM response as JSON", raw_preview=raw[:200])
+    logger.error("Could not parse LLM response as JSON", raw_length=len(raw))
     return {}
 
 
@@ -246,16 +261,19 @@ def _validate_and_build(parsed: dict, raw_text: str) -> ExtractedSymptoms:
 
         confidence = _clamp_confidence(parsed.get("confidence", 1.0))
 
-        # Determine reason for low confidence if applicable
-        low_confidence_reason = None
-        if confidence < 0.5:
+        low_confidence_reason: Optional[str] = None
+
+        if confidence < _LOW_CONFIDENCE_THRESHOLD:
             low_confidence_reason = (
                 f"LLM reported low confidence ({confidence:.2f}). "
-                "Symptoms may be vague or extraction unclear."
+                "Symptoms may be vague, ambiguous, or unclear."
             )
+
         if not primary and not associated:
-            if low_confidence_reason is None:
-                low_confidence_reason = "No symptoms could be extracted from the message."
+            low_confidence_reason = (
+                low_confidence_reason
+                or "No symptoms could be extracted from the message."
+            )
 
         return ExtractedSymptoms(
             primary_symptoms=primary,
@@ -270,7 +288,7 @@ def _validate_and_build(parsed: dict, raw_text: str) -> ExtractedSymptoms:
         logger.error("Validation failed during extraction build", error=str(exc))
         return ExtractedSymptoms(
             raw_text=raw_text,
-            confidence=_DEFAULT_CONFIDENCE,
+            confidence=_FAILED_CONFIDENCE,
             low_confidence_reason=f"Validation error: {exc}",
         )
 
@@ -278,11 +296,14 @@ def _validate_and_build(parsed: dict, raw_text: str) -> ExtractedSymptoms:
 def _build_symptom_list(raw_symptoms: list) -> list[Symptom]:
     """Convert a list of raw symptom dicts into validated Symptom objects.
 
+    Logs a warning when severity is missing and uses "moderate" as a
+    conservative fallback, since missing severity is a data quality signal.
+
     Args:
         raw_symptoms: List of dicts from the LLM JSON.
 
     Returns:
-        List of Symptom objects (invalid entries are silently dropped).
+        List of Symptom objects (invalid entries are skipped with a debug log).
     """
     symptoms: list[Symptom] = []
 
@@ -291,6 +312,12 @@ def _build_symptom_list(raw_symptoms: list) -> list[Symptom]:
             continue
         if not item.get("name"):
             continue
+
+        if "severity" not in item:
+            logger.warning(
+                "Symptom missing severity field, defaulting to moderate",
+                name=item.get("name"),
+            )
 
         try:
             symptoms.append(
@@ -337,6 +364,6 @@ def _clamp_confidence(value: object) -> float:
     try:
         confidence = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
-        return _DEFAULT_CONFIDENCE
+        return _FAILED_CONFIDENCE
 
     return max(0.0, min(1.0, confidence))

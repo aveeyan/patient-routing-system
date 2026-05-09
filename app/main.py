@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Patient Triage Chatbot",
     description="AI-powered patient triage and routing system",
-    version="1.0.0",
+    version="0.0.1",
     lifespan=lifespan,
 )
 
@@ -46,4 +46,4 @@ app.include_router(triage_router, prefix="/triage", tags=["Triage"])
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "patient-triage-chatbot"}
+    return {"status": "healthy", "service": "patient-routing-system"}

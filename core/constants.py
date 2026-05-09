@@ -2,11 +2,11 @@
 """Constants for the overall system"""
 
 # Standard Imports
-from enum import StrEnum
+from enum import Enum
 
 
 ## Triage Conversion States
-class TriageState(StrEnum):
+class TriageState(str, Enum):
     """States for the conversation state machine."""
     IDLE = "idle"
     GATHERING = "gathering"
@@ -18,14 +18,14 @@ class TriageState(StrEnum):
 ## Triage Classification
 #
 # Urgency Levels
-class UrgencyLevel(StrEnum):
+class UrgencyLevel(str, Enum):
     """Urgency levels for triage classification."""
     EMERGENCY = "emergency"
     URGENT = "urgent"
     ROUTINE = "routine"
 
 # Departments
-class Department(StrEnum):
+class Department(str, Enum):
     """Hospital departments for patient routing."""
     EMERGENCY = "emergency"
     CARDIOLOGY = "cardiology"
@@ -54,7 +54,7 @@ class Department(StrEnum):
 
 
 ## Severity Levels
-class Severity(StrEnum):
+class Severity(str, Enum):
     """Severity levels for patient assessment."""
     MILD = "mild"
     MODERATE = "moderate"
@@ -110,21 +110,9 @@ CRITICAL_SYMPTOMS: set[str] = {
 }
 
 # Critical severity markers
+# These must be valid Severity enum values.
 CRITICAL_SEVERITY_MARKERS: set[str] = {
     "severe",
-    "unbearable",
-    "life_threatening",
-    "cannot_breathe",
-    "unconscious",
-    "sudden_onset",
-    "worst_ever",
-    "crushing",
-    "tearing",
-    "excruciating",
-    "unresponsive",
-    "paralyzed",
-    "profuse",
-    "unstoppable",
 }
 
 # Symptoms -> Department Mapping

@@ -105,7 +105,7 @@ async def process_message(
 async def _ask_follow_up(
     db: AsyncSession,
     session_id: str,
-    normalized: EncounterSummary,
+    normalized: ExtractedSymptoms,
 ) -> BotResponse:
     """Generate and persist a follow-up question."""
     summary = build_symptoms_summary(normalized)
@@ -147,6 +147,7 @@ async def _complete_triage(
         session_id=session_id,
         chief_complaint=get_chief_complaint(normalized),
         urgency=urgency,
+        severity=get_overall_severity(normalized),
         service_type=department,
         triage_timestamp=datetime.utcnow(),
         extracted_symptoms=get_all_symptom_names(normalized),

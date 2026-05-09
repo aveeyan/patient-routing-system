@@ -24,10 +24,12 @@ def is_sufficient(extracted: ExtractedSymptoms, turn_count: int) -> bool:
         points += 1
     if any(s.body_site for s in all_symptoms):
         points += 1
-    if extracted.confidence >= 0.8:
+    if extracted.confidence >= 0.9 and len(all_symptoms) >= 2:
         points += 1
+    if all(s.severity == "moderate" for s in all_symptoms):
+            points -= 1
 
-    return points >= settings.confidence_threshold
+    return points >= settings.min_data_points
 
 
 def build_symptoms_summary(extracted: ExtractedSymptoms) -> str:
