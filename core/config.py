@@ -79,12 +79,30 @@ class AzureSpeechSettings(BaseSettings):
         return self.key is not None and self.region is not None
 
 
+## Settings for Whisper Speech-to-Text
+class WhisperSpeechSettings(BaseSettings):
+    """Settings for local faster-whisper transcription."""
+
+    model_size: str = Field(
+        default="small",
+        description="Whisper model size: base (~74 MB), small (~244 MB), medium (~769 MB)",
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="WHISPER_SPEECH_",
+        extra="ignore",
+        env_file=_ENV_FILE,
+        env_file_encoding="utf-8",
+    )
+
+
 ## Main Settings
 class Settings(BaseSettings):
     """Main settings for the patient routing system (loaded from env)"""
 
     azure_openai: AzureOpenAISettings = Field(default_factory=AzureOpenAISettings)
     azure_speech: AzureSpeechSettings = Field(default_factory=AzureSpeechSettings)
+    whisper: WhisperSpeechSettings = Field(default_factory=WhisperSpeechSettings)
 
     database_url: str = Field(
         default="sqlite+aiosqlite:///./triage.db",

@@ -167,7 +167,7 @@ uvicorn app.main:app --reload
 ### 4. Speech Transcription (Optional)
 Uses `faster-whisper` locally, and no external speech API required. Model size is configurable:
 ```env
-SPEECH_WHISPER_MODEL_SIZE=small
+WHISPER_SPEECH_MODEL_SIZE=small
 ```
 
 ### 5. API Flow

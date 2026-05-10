@@ -61,8 +61,7 @@ def _normalise_mime(content_type) -> str:
         return _DEFAULT_CONTENT_TYPE
     return content_type.split(";")[0].strip().lower()
 
-## Maximum audio payload accepted (100 MB — local, so no hard API limit;
-## kept generous but bounded to avoid memory issues on the server).
+## Maximum audio payload accepted (100 MB — local, so no hard API limit)
 MAX_AUDIO_BYTES = 100 * 1024 * 1024
 
 
@@ -84,9 +83,9 @@ def _load_model() -> WhisperModel:
     """
     try:
         from core.config import settings
-        model_size: str = settings.speech.whisper_model_size
+        model_size: str = settings.whisper.model_size
     except (ImportError, AttributeError):
-        model_size = "small"  # Safe default if settings key is not yet defined
+        model_size = "small"
 
     logger.info("Loading faster-whisper model", model_size=model_size)
 
