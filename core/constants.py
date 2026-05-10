@@ -71,20 +71,6 @@ TRIAGE_DISCLAIMER = (
 
 
 ## Critical Symptoms (Emergency Override)
-#
-# Any symptom in this set forces UrgencyLevel.EMERGENCY regardless of severity or
-# any other classification logic. These are UNAMBIGUOUS, immediately life-threatening
-# presentations where any delay risks death.
-#
-# FIX (Bug B): Removed "chest_pain" and "shortness_of_breath" from this set.
-# These are HIGH-PRIORITY symptoms, but not unconditionally emergencies.
-# A mild chest wall strain, musculoskeletal ache, or anxiety-related SOB routed
-# straight to Emergency would overcrowd the ED and is clinically incorrect.
-# These now escalate via CRITICAL_SEVERITY_MARKERS ("severe" severity) instead,
-# so "severe chest pain" → Emergency, but "mild chest tightness" → Cardiology outpatient.
-#
-# Kept here: conditions where ANY presentation, regardless of severity, is life-threatening
-# (cardiac arrest, stroke, anaphylaxis, poisoning, etc.).
 CRITICAL_SYMPTOMS: set[str] = {
     # Cardiac (unconditional — no mild presentation exists)
     "cardiac_arrest",
@@ -141,14 +127,6 @@ CRITICAL_SYMPTOMS: set[str] = {
 }
 
 # Severity-scoped emergency escalation.
-#
-# ONLY symptoms in this set escalate to Emergency when the LLM extracts severity="severe".
-# A severe toothache is not an emergency. A severe chest_pain is.
-#
-# Previously this was CRITICAL_SEVERITY_MARKERS = {"severe"}, which matched ANY symptom
-# the LLM rated as severe — including toothaches, back pain, and headaches from tension.
-# That caused massive over-triage to the ED. Now the check is:
-#   symptom.name in SEVERITY_ESCALATES_TO_EMERGENCY AND symptom.severity == Severity.SEVERE
 SEVERITY_ESCALATES_TO_EMERGENCY: set[str] = {
     "chest_pain",
     "shortness_of_breath",
@@ -158,23 +136,10 @@ SEVERITY_ESCALATES_TO_EMERGENCY: set[str] = {
     "breathing_difficulty",
     "chest_tightness",
     "pelvic_pain",           # ectopic pregnancy at severe presentation
-    # NOTE: arm_pain and jaw_pain intentionally excluded.
-    # Cardiac referred pain in the arm/jaw is already caught because the patient
-    # will ALSO report chest_pain (which IS in this set). If arm_pain at severe
-    # severity were included here, a patient saying "I broke my arm, pain is 9/10"
-    # would incorrectly trigger Emergency instead of Urgent Orthopedics.
 }
 
 
 ## Urgent Symptoms (Urgent Override)
-#
-# Symptoms in this set force UrgencyLevel.URGENT regardless of the classifier's
-# severity-count logic. These are serious conditions that need same-day care but are
-# not immediately life-threatening.
-#
-# FIX (Bug E): This set was defined but never checked. It is now wired into
-# rules.py via check_urgent_symptoms() and called from pipeline.py.
-# This fixes the fracture → ROUTINE misclassification (test case 4).
 URGENT_SYMPTOMS: set[str] = {
     # Cardiac (non-emergency presentations)
     "chest_pain",            # Moved here from CRITICAL_SYMPTOMS — urgent, not always emergency

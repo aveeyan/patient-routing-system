@@ -11,8 +11,7 @@ from schemas.triage import ExtractedSymptoms, Symptom
 
 
 ## Synonym Map
-# Maps common layperson terms and LLM variants to canonical symptom names
-# that exist as keys in core.constants.SYMPTOM_DEPARTMENT_MAP.
+# Maps common layperson terms and LLM variants to canonical symptom names that exist as keys in core.constants.SYMPTOM_DEPARTMENT_MAP.
 # Only include terms NOT already present as keys in that map.
 SYNONYM_MAP: dict[str, str] = {
 
@@ -61,8 +60,6 @@ SYNONYM_MAP: dict[str, str] = {
     "forgetfulness": "memory_loss",
 
     # Trauma / Amputation / Bleeding
-    # These are the highest-priority synonyms in the entire map — missing any of
-    # these means a patient describing a severed finger gets routed to OPD.
     "lost_a_finger": "limb_amputation",
     "lost_my_finger": "limb_amputation",
     "finger_cut_off": "limb_amputation",
@@ -95,7 +92,6 @@ SYNONYM_MAP: dict[str, str] = {
     "spurting_blood": "heavy_bleeding",
 
     # Ortho — Fractures
-    # "I broke my arm" and variants must resolve to `fracture`, never `arm_pain`.
     "cracked_bone": "fracture",
     "bone_fracture": "fracture",
     "broken_arm": "fracture",
@@ -222,6 +218,16 @@ SYNONYM_MAP: dict[str, str] = {
     "severe_allergy": "anaphylaxis",
     "swollen_glands": "swollen_lymph_nodes",
     "bruise_easily": "easy_bruising",
+
+    # Self Harm
+    "suicidal": "suicidal_ideation",
+    "feeling_suicidal": "suicidal_ideation",
+    "i_am_suicidal": "suicidal_ideation",
+    "feeling_like_dying": "suicidal_ideation",
+    "dont_want_to_live": "suicidal_ideation",
+    "don't_want_to_live": "suicidal_ideation",
+    "no_will_to_live": "suicidal_ideation",
+    "thinking_of_ending_it": "suicidal_ideation",
 }
 
 

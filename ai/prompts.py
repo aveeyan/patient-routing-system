@@ -209,7 +209,18 @@ use the canonical emergency names above.
 
 ---
 
-#### 10. Temporal Relevance
+#### 10. Suicidal and Self-Harm Language (CRITICAL)
+
+Any expression of wanting to die, end one's life, or not wanting to live
+MUST be extracted as: suicidal_ideation
+
+severity: always "severe"
+Do NOT treat this as vague or low confidence.
+Do NOT return an empty symptoms list for these phrases.
+
+---
+
+#### 11. Temporal Relevance
 
 If symptom is resolved:
 → DO NOT include it

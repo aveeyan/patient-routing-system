@@ -82,16 +82,10 @@ def build_symptoms_summary(extracted: ExtractedSymptoms) -> str:
 def build_missing_info(extracted: ExtractedSymptoms) -> str:
     """What information is still needed for triage — returned as a terse internal signal.
 
-    This string is injected into the follow-up system prompt as a brief note for the LLM.
-    It must NOT be clinical, wordy, or contain pre-written phrases the LLM might echo
-    verbatim into its response — that was the root cause of the robotic tone.
-
-    Keep each item short: the LLM's warmth and phrasing come entirely from the
-    FOLLOW_UP_PROMPT instructions, not from this string.
+    Keep each item short: the LLM's warmth and phrasing come entirely from the FOLLOW_UP_PROMPT instructions, not from this string.
     """
     missing = []
     all_symptoms = extracted.primary_symptoms + extracted.associated_symptoms
-    symptom_names = {s.name for s in all_symptoms}
 
     if not any(s.duration for s in all_symptoms):
         missing.append("duration not captured")
@@ -101,19 +95,6 @@ def build_missing_info(extracted: ExtractedSymptoms) -> str:
 
     if len(all_symptoms) == 1 and all_symptoms[0].severity == Severity.MODERATE:
         missing.append("severity clarification")
-
-    # # Symptom-specific red flag gaps — keep as short labels, not full sentences
-    # if "chest_pain" in symptom_names and "shortness_of_breath" not in symptom_names:
-    #     missing.append("radiation or shortness of breath (cardiac red flag)")
-    # if "headache" in symptom_names and "dizziness" not in symptom_names:
-    #     missing.append("dizziness, vision change, or neck stiffness (neuro red flag)")
-    # if "abdominal_pain" in symptom_names and "nausea" not in symptom_names:
-    #     missing.append("nausea, vomiting, or bowel changes")
-    # if "fracture" in symptom_names or "broken_bone" in symptom_names:
-    #     if not any(s.body_site for s in all_symptoms):
-    #         missing.append("which bone / deformity / numbness")
-    # if "fever" in symptom_names and "cough" not in symptom_names:
-    #     missing.append("associated cough, sore throat, or body aches")
 
     return "; ".join(missing) if missing else "any other details the patient wants to share"
 
