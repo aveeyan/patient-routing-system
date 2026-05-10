@@ -1,0 +1,470 @@
+<!-- app/templates/dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Routing · Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #f4f7fb;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        /* ── TOPBAR ── */
+        .topbar {
+            background: #f0f4ff;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            padding: 0 1.25rem;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            border-bottom: 1px solid #dce3f0;
+            gap: .75rem;
+        }
+        .topbar-brand {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.1rem;
+            color: #1e3a5f;
+            letter-spacing: -.01em;
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            text-decoration: none;
+        }
+        .btn-back {
+            background: #ffffff;
+            border: 1px solid #dce3f0;
+            border-radius: .625rem;
+            color: #5b6e8c;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .35rem .85rem;
+            font-size: .82rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        .btn-back:hover { background: #f0f4ff; color: #1e3a5f; }
+
+        /* ── PAGE LAYOUT ── */
+        .dashboard-container {
+            max-width: 100%;
+            margin: 1.5rem auto;
+            padding: 0 1.5rem;
+        }
+        .page-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.6rem;
+            color: #1e3a5f;
+            margin-bottom: .35rem;
+        }
+        .page-subtitle { font-size: .88rem; color: #6b7b95; margin-bottom: 1.5rem; }
+
+        /* ── CARD ── */
+        .card-custom {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1.25rem;
+            box-shadow: 0 2px 16px rgba(10,22,40,.05);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .card-custom .card-header-custom {
+            padding: .875rem 1.25rem;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: .65rem;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #6b7b95;
+            background: transparent;
+            flex-shrink: 0;
+        }
+        .card-custom .card-body-custom {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* ── SESSION TABLE ── */
+        .session-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: .82rem;
+        }
+        .session-table thead th {
+            padding: .5rem .65rem;
+            font-size: .62rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #6b7b95;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+            position: sticky;
+            top: 0;
+        }
+        .session-table tbody tr {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .session-table tbody tr:not(:last-child) td { border-bottom: 1px solid #e2e8f0; }
+        .session-table tbody tr:hover { background: #f0f4ff; }
+        .session-table tbody tr.active-row { background: #e0eaff; }
+        .session-table td { padding: .55rem .65rem; vertical-align: middle; }
+
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            border-radius: 2rem;
+            padding: .15rem .55rem;
+            font-size: .68rem;
+            font-weight: 600;
+            border: 1.5px solid;
+        }
+        .badge-completed { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+        .badge-gathering  { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+        .badge-idle       { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+
+        /* ── DETAIL PANEL ── */
+        .detail-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            text-align: center;
+            color: #6b7b95;
+        }
+        .detail-empty i { font-size: 2.5rem; margin-bottom: .5rem; }
+
+        .result-card {
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1.5px solid #e2e8f0;
+            box-shadow: 0 2px 12px rgba(10,22,40,.04);
+        }
+        .result-header {
+            padding: .75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+        }
+        .result-header-icon {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .9rem;
+        }
+        .urg-emergency .result-header, .urg-emergency .result-header-icon { background: #fef2f2; color: #ef4444; }
+        .urg-urgent    .result-header, .urg-urgent    .result-header-icon { background: #fffbeb; color: #b45309; }
+        .urg-routine   .result-header, .urg-routine   .result-header-icon { background: #f0fdf4; color: #15803d; }
+
+        .chip-emergency { background: #fff1f1; color: #ef4444; border-color: #fecaca; }
+        .chip-urgent    { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+        .chip-routine   { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+        .chip-base {
+            display: inline-flex; align-items: center; gap: .35rem;
+            border-radius: 2rem; padding: .25rem .7rem; font-size: .75rem;
+            font-weight: 600; border: 1.5px solid;
+        }
+        .service-badge {
+            background: #e0eaff;
+            color: #1e3a5f;
+            border-radius: .5rem;
+            padding: .25rem .7rem;
+            font-size: .75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
+        .detail-table {
+            width: 100%; border-collapse: separate; border-spacing: 0;
+            border: 1px solid #e2e8f0; border-radius: .5rem; overflow: hidden;
+            font-size: .8rem; margin-top: .75rem;
+        }
+        .detail-table td { padding: .4rem .65rem; }
+        .detail-table td:first-child { font-weight: 600; width: 45%; }
+
+        /* Conversation preview */
+        .conversation-preview {
+            font-size: .8rem;
+            display: flex;
+            flex-direction: column;
+            gap: .4rem;
+        }
+        .conversation-preview .turn {
+            padding: .45rem .55rem;
+            border-radius: .5rem;
+        }
+        .conversation-preview .turn.user { background: #e0eaff; }
+        .conversation-preview .turn.bot  { background: #ffffff; border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+
+    <!-- ── TOPBAR ── -->
+    <div class="topbar">
+        <a class="topbar-brand" href="/">
+            <i class="bi bi-heart-pulse-fill text-danger"></i>
+            Patient Routing System
+        </a>
+        <div class="ms-auto">
+            <a href="/" class="btn-back"><i class="bi bi-arrow-left"></i> Back to Chat</a>
+        </div>
+    </div>
+
+    <!-- ── DASHBOARD CONTENT ── -->
+    <div class="dashboard-container">
+        <h2 class="page-title">Session Dashboard</h2>
+        <p class="page-subtitle">Review all patient triage sessions and their outcomes.</p>
+
+        <!-- Three-column layout -->
+        <div class="row g-3" style="height: calc(100vh - 180px);">
+
+            <!-- LEFT: Session History List -->
+            <div class="col-lg-3">
+                <div class="card-custom">
+                    <div class="card-header-custom"><i class="bi bi-list-ul me-1"></i>Sessions</div>
+                    <div class="card-body-custom p-0">
+                        <table class="session-table mb-0">
+                            <thead>
+                                <tr><th>Session</th><th>Status</th></tr>
+                            </thead>
+                            <tbody id="sessionTableBody">
+                                <tr><td colspan="2" class="text-center text-muted py-3">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MIDDLE: Session Information & Triage Result -->
+            <div class="col-lg-4">
+                <div class="card-custom" id="detailCard">
+                    <div class="card-header-custom"><i class="bi bi-info-circle me-1"></i>Session Info</div>
+                    <div class="card-body-custom" id="detailBody">
+                        <div class="detail-empty">
+                            <i class="bi bi-arrow-left-circle"></i>
+                            <p>Select a session from the list</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Conversation History -->
+            <div class="col-lg-5">
+                <div class="card-custom" id="conversationCard">
+                    <div class="card-header-custom"><i class="bi bi-chat-dots me-1"></i>Conversation</div>
+                    <div class="card-body-custom" id="conversationBody">
+                        <div class="detail-empty">
+                            <i class="bi bi-chat-square-text"></i>
+                            <p>Conversation will appear here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let activeSessionId = null;
+
+        loadSessions();
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '—';
+            const d = new Date(isoString);
+            return d.toLocaleString([], {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        async function loadSessions() {
+            try {
+                const res = await fetch('/triage/sessions');
+                const data = await res.json();
+                renderSessions(data.sessions || []);
+            } catch (err) {
+                document.getElementById('sessionTableBody').innerHTML =
+                    '<tr><td colspan="2" class="text-danger text-center py-3">Failed to load.</td></tr>';
+            }
+        }
+
+        function renderSessions(sessions) {
+            const tbody = document.getElementById('sessionTableBody');
+            if (!sessions.length) {
+                tbody.innerHTML = '<tr><td colspan="2" class="text-muted text-center py-3">No sessions yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = sessions.map(s => {
+                const statusClass = s.state === 'completed' ? 'badge-completed' :
+                                    s.state === 'gathering'  ? 'badge-gathering' : 'badge-idle';
+                const isActive = s.session_id === activeSessionId;
+                return `
+                <tr onclick="loadSessionDetail('${s.session_id}')" class="${isActive ? 'active-row' : ''}">
+                    <td class="font-monospace small">${s.session_id.slice(0,8)}…</td>
+                    <td><span class="badge-status ${statusClass}">${s.state}</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function loadSessionDetail(sessionId) {
+            activeSessionId = sessionId;
+
+            // Highlight active row
+            document.querySelectorAll('.session-table tbody tr').forEach(row => {
+                row.classList.remove('active-row');
+            });
+
+            const detailBody = document.getElementById('detailBody');
+            const conversationBody = document.getElementById('conversationBody');
+
+            detailBody.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span></div>';
+            conversationBody.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span></div>';
+
+            try {
+                const res = await fetch(`/triage/history/${sessionId}`);
+                if (!res.ok) throw new Error('Not found');
+                const data = await res.json();
+                renderDetail(data);
+                renderConversation(data.messages || []);
+            } catch (err) {
+                detailBody.innerHTML = '<div class="detail-empty"><p class="text-danger">Failed to load details.</p></div>';
+                conversationBody.innerHTML = '<div class="detail-empty"><p class="text-danger">Failed to load conversation.</p></div>';
+            }
+        }
+
+        function renderDetail(data) {
+            const detailBody = document.getElementById('detailBody');
+            const triage = data.triage;
+
+            let html = `<div class="p-3">`;
+
+            // Session metadata
+            html += `
+                <div class="mb-3">
+                    <div class="small text-muted">Session ID</div>
+                    <div class="font-monospace small">${data.session_id}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="small text-muted">Status</div>
+                        <span class="text-capitalize fw-semibold">${data.state}</span>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">Turns</div>
+                        <span class="fw-semibold">${(data.messages || []).filter(m => m.role === 'user').length}</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="small text-muted">Created</div>
+                    <div class="small">${formatDateTime(data.created_at)}</div>
+                </div>`;
+
+            if (data.completed_at) {
+                html += `
+                <div class="mb-3">
+                    <div class="small text-muted">Completed</div>
+                    <div class="small">${formatDateTime(data.completed_at)}</div>
+                </div>`;
+            }
+
+            html += '<hr>';
+
+            // Triage result
+            if (triage) {
+                const urgencyColor = triage.urgency === 'emergency' ? 'emergency' :
+                                     triage.urgency === 'urgent'    ? 'urgent' : 'routine';
+                const cfg = {
+                    emergency: { icon: 'bi-exclamation-triangle-fill', chip: 'chip-emergency', label: 'Emergency' },
+                    urgent:    { icon: 'bi-exclamation-circle-fill',   chip: 'chip-urgent',    label: 'Urgent' },
+                    routine:   { icon: 'bi-check-circle-fill',         chip: 'chip-routine',   label: 'Routine' },
+                }[urgencyColor] || { icon: 'bi-check-circle-fill', chip: 'chip-routine', label: 'Routine' };
+
+                html += `
+                <div class="result-card urg-${urgencyColor}">
+                    <div class="result-header">
+                        <div class="result-header-icon"><i class="bi ${cfg.icon}"></i></div>
+                        <div><strong>${cfg.label}</strong><br><small class="opacity-75">Triage Result</small></div>
+                    </div>
+                    <div class="p-2">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="chip-base ${cfg.chip}"><i class="bi ${cfg.icon}"></i>${cfg.label}</span>
+                            <span class="service-badge"><i class="bi bi-hospital"></i>${triage.department.replace(/_/g,' ')}</span>
+                        </div>
+                        <p class="small mb-2">${triage.recommendation}</p>
+                        <table class="detail-table">
+                            <tr><td>Severity</td><td class="text-capitalize">${triage.severity}</td></tr>
+                            <tr><td>Critical Override</td><td>${triage.is_critical_override ? 'Yes' : 'No'}</td></tr>
+                        </table>
+                        <p class="text-muted mt-2 mb-0" style="font-size:.68rem;"><i class="bi bi-shield-check me-1"></i>${triage.disclaimer}</p>
+                    </div>
+                </div>`;
+            } else {
+                html += '<div class="alert alert-info small mb-0">No triage result yet.</div>';
+            }
+
+            html += '</div>';
+            detailBody.innerHTML = html;
+
+            // Re-highlight the active row
+            const rows = document.querySelectorAll('.session-table tbody tr');
+            rows.forEach(row => {
+                const cell = row.querySelector('td');
+                if (cell && cell.textContent.trim().startsWith(data.session_id.slice(0,8))) {
+                    row.classList.add('active-row');
+                }
+            });
+        }
+
+        function renderConversation(messages) {
+            const conversationBody = document.getElementById('conversationBody');
+
+            if (!messages.length) {
+                conversationBody.innerHTML = '<div class="detail-empty"><i class="bi bi-chat-square-text"></i><p>No messages yet.</p></div>';
+                return;
+            }
+
+            let html = '<div class="conversation-preview p-3">';
+            messages.forEach(m => {
+                const isUser = m.role === 'user';
+                html += `
+                <div class="turn ${m.role}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong class="small">${isUser ? 'Patient' : 'Samira'}</strong>
+                        <span class="text-muted" style="font-size:.65rem;">${formatDateTime(m.timestamp)}</span>
+                    </div>
+                    <div class="small mt-1">${escapeHtml(m.content)}</div>
+                </div>`;
+            });
+            html += '</div>';
+            conversationBody.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

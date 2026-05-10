@@ -11,13 +11,17 @@ from schemas.triage import ExtractedSymptoms, Symptom
 
 
 ## Routing Fallback
-# When no symptom maps to a known department, the router falls back to OPD for safe, non-emergency handling.
+# When no symptom maps to a known department, the router falls back to
+# General Medicine for safe, non-emergency handling.
 _FALLBACK_DEPARTMENT = Department.GENERAL_MEDICINE
 
 
 ## Department Priority
+# When multiple symptoms map to different departments, the department with
+# the lowest index in this list wins.
+# Note: Department.EMERGENCY has been removed — it is not a routing target.
+# Urgency level carries the "how fast" signal; department carries "which team".
 _DEPARTMENT_PRIORITY: list[Department] = [
-    Department.EMERGENCY,
     Department.CARDIOLOGY,
     Department.NEUROLOGY,
     Department.PULMONOLOGY,
@@ -73,7 +77,7 @@ def route_to_department(extracted: ExtractedSymptoms) -> tuple[Department, list[
     1. Primary symptoms represent the chief complaint and are checked first.
     2. If multiple departments match, the highest-priority department wins.
     3. If no primary symptom maps, associated symptoms are used.
-    4. If nothing maps, OPD is returned as the safe fallback.
+    4. If nothing maps, General Medicine is returned as the safe fallback.
 
     Args:
         extracted: Normalized symptoms from the normalizer.
@@ -113,7 +117,7 @@ def route_to_department(extracted: ExtractedSymptoms) -> tuple[Department, list[
         return selected, associated_matches
 
     logger.warning(
-        "No symptoms matched any department, falling back to OPD",
+        "No symptoms matched any department, falling back to General Medicine",
         primary_count=len(active_primary),
         associated_count=len(active_associated),
         primary_names=[s.name for s in active_primary],

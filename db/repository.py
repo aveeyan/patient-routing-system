@@ -164,9 +164,10 @@ async def list_sessions(
 ) -> list[Session]:
     """List sessions ordered by creation time (newest first), with pagination."""
     result = await db.execute(
-        select(Session)
-        .order_by(Session.created_at.desc())
-        .limit(limit)
-        .offset(offset)
-    )
+            select(Session)
+            .options(selectinload(Session.messages))
+            .order_by(Session.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
     return list(result.scalars().all())

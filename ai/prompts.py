@@ -139,16 +139,38 @@ Do NOT infer location.
 
 ---
 
-#### 8. Injury Handling
+#### 8. Injury and Fracture Handling (CRITICAL)
 
-If injury AND body part mentioned:
-→ extract symptom tied to that body part
+When a patient describes a traumatic injury to a bone or limb, extract the
+STRUCTURAL injury — not the pain at that site.
 
-Example:
-"fell and hurt my wrist"
-→ wrist_pain
+**Rule: if the patient says they broke, cracked, fractured, or snapped a bone:**
+→ extract as: fracture (with body_site set to the affected bone/limb)
 
-Do NOT guess body parts.
+NEVER extract a broken bone as `arm_pain`, `wrist_pain`, `leg_pain`, etc.
+The pain is a symptom of the fracture — the fracture is the primary symptom.
+
+Examples (all → fracture):
+- "I broke my arm after a fall" → fracture, body_site: "arm"
+- "I think my wrist is broken" → fracture, body_site: "wrist"
+- "I cracked my collarbone" → fracture, body_site: "collarbone"
+- "I may have fractured my ankle" → fracture, body_site: "ankle"
+- "my leg snapped" → fracture, body_site: "leg"
+- "stress fracture in my foot" → fracture, body_site: "foot"
+
+**Non-fracture injuries** (soft tissue, no broken bone described):
+→ extract as the appropriate pain symptom
+
+Examples:
+- "I fell and hurt my wrist" (no bone break mentioned) → wrist_pain, body_site: "wrist"
+- "I twisted my ankle" → sprain, body_site: "ankle"
+- "I pulled a muscle in my back" → muscle_pain, body_site: "back"
+
+**Severity for fractures:**
+A patient reporting 7+ out of 10 pain, "unbearable", or "excruciating" after a
+bone injury → severity: "severe". Do NOT downgrade because it is "just a fracture".
+
+Do NOT guess body parts if none are mentioned.
 
 ---
 

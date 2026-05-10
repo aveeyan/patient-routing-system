@@ -79,11 +79,13 @@
             cursor: pointer;
             display: flex; align-items: center; gap: .35rem;
             transition: all 0.2s ease;
+            text-decoration: none !important;
         }
         .btn-new:hover {
             background: #f0f4ff;
             border-color: #b8c7e0;
             color: #1e3a5f;
+            text-decoration: none !important;
         }
 
         /* ── LAYOUT ── */
@@ -351,6 +353,9 @@
                 <span class="dot"></span>
                 <span id="statusText">Ready</span>
             </span>
+            <a href="/dashboard" class="btn-new">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
             <button class="btn-new" onclick="resetAssessment()">
                 <i class="bi bi-arrow-repeat"></i> New Session
             </button>
@@ -577,7 +582,12 @@
                                 <i class="bi ${cfg.icon}" style="font-size:.7rem;"></i>${cfg.label}
                             </span>
                             <span class="service-badge">
-                                <i class="bi bi-hospital"></i>${e.service_type.replace(/_/g,' ')}
+                              <i class="bi bi-hospital"></i>
+                              ${e.service_type
+                                .replace(/_/g, ' ')
+                                .toLowerCase()
+                                .replace(/\b\w/g, c => c.toUpperCase())
+                              }
                             </span>
                         </div>
                         <div style="font-size:.95rem; color:#4a5a78; margin-bottom:.8rem; line-height:1.65;">
@@ -678,7 +688,14 @@
                     <div class="card-body">
                         <div class="d-flex gap-2 mb-2">
                             <span class="chip-base ${cfg.chip}"><i class="bi ${cfg.icon}"></i>${cfg.label}</span>
-                            <span class="service-badge"><i class="bi bi-hospital"></i>${e.service_type.replace(/_/g,' ')}</span>
+                            <span class="service-badge">
+                              <i class="bi bi-hospital"></i>
+                              ${e.service_type
+                                .replace(/_/g, ' ')
+                                .toLowerCase()
+                                .replace(/\b\w/g, c => c.toUpperCase())
+                              }
+                            </span>
                         </div>
                         <p class="small">${data.bot_message.replace(/\n/g,'<br>')}</p>
                         <table class="detail-table">

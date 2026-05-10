@@ -63,3 +63,9 @@ async def serve_ui():
     """Serve the chat interface."""
     index_path = TEMPLATES_DIR / "index.html"
     return HTMLResponse(content=index_path.read_text())
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def serve_dashboard():
+    """Serve the dashboard interface."""
+    dashboard_path = TEMPLATES_DIR / "dashboard.html"
+    return HTMLResponse(content=dashboard_path.read_text())

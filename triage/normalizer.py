@@ -11,7 +11,9 @@ from schemas.triage import ExtractedSymptoms, Symptom
 
 
 ## Synonym Map
-# Maps common layperson terms and LLM variants to canonical symptom names that exist as keys in core.constants.SYMPTOM_DEPARTMENT_MAP.
+# Maps common layperson terms and LLM variants to canonical symptom names
+# that exist as keys in core.constants.SYMPTOM_DEPARTMENT_MAP.
+# Only include terms NOT already present as keys in that map.
 SYNONYM_MAP: dict[str, str] = {
 
     # Cardiac / Respiratory
@@ -59,6 +61,8 @@ SYNONYM_MAP: dict[str, str] = {
     "forgetfulness": "memory_loss",
 
     # Trauma / Amputation / Bleeding
+    # These are the highest-priority synonyms in the entire map — missing any of
+    # these means a patient describing a severed finger gets routed to OPD.
     "lost_a_finger": "limb_amputation",
     "lost_my_finger": "limb_amputation",
     "finger_cut_off": "limb_amputation",
@@ -90,11 +94,35 @@ SYNONYM_MAP: dict[str, str] = {
     "gushing_blood": "heavy_bleeding",
     "spurting_blood": "heavy_bleeding",
 
-    # Ortho
+    # Ortho — Fractures
+    # "I broke my arm" and variants must resolve to `fracture`, never `arm_pain`.
     "cracked_bone": "fracture",
     "bone_fracture": "fracture",
     "broken_arm": "fracture",
+    "broke_my_arm": "fracture",
+    "broke_arm": "fracture",
     "broken_leg": "fracture",
+    "broke_my_leg": "fracture",
+    "broke_leg": "fracture",
+    "broken_wrist": "fracture",
+    "broke_my_wrist": "fracture",
+    "broken_hand": "fracture",
+    "broken_finger": "fracture",
+    "broken_toe": "fracture",
+    "broken_foot": "fracture",
+    "broken_ankle": "fracture",
+    "broken_collarbone": "fracture",
+    "broken_rib": "fracture",
+    "broken_nose": "fracture",
+    "broken_jaw": "fracture",
+    "broken_hip": "fracture",
+    "broken_knee": "fracture",
+    "broken_elbow": "fracture",
+    "broken_shoulder": "fracture",
+    "snapped_bone": "fracture",
+    "stress_fracture": "fracture",
+    "hairline_fracture": "fracture",
+    "compound_fracture": "fracture",
     "muscle_ache": "muscle_pain",
     "back_ache": "back_pain",
     "neck_ache": "neck_pain",
