@@ -11,14 +11,11 @@ from schemas.triage import ExtractedSymptoms, Symptom
 
 
 ## Routing Fallback
-# When no symptom maps to a known department, the router falls back to
-# OPD for safe, non-emergency handling.
-_FALLBACK_DEPARTMENT = Department.OPD
+# When no symptom maps to a known department, the router falls back to OPD for safe, non-emergency handling.
+_FALLBACK_DEPARTMENT = Department.GENERAL_MEDICINE
 
 
 ## Department Priority
-# When multiple symptoms map to different departments, the department with
-# the lowest index in this list wins.
 _DEPARTMENT_PRIORITY: list[Department] = [
     Department.EMERGENCY,
     Department.CARDIOLOGY,
@@ -43,7 +40,6 @@ _DEPARTMENT_PRIORITY: list[Department] = [
     Department.ONCOLOGY,
     Department.PEDIATRICS,
     Department.GERIATRICS,
-    Department.OPD,
     Department.GENERAL_MEDICINE,
 ]
 

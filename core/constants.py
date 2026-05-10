@@ -25,7 +25,6 @@ class UrgencyLevel(str, Enum):
 class Department(str, Enum):
     """Hospital departments for patient routing."""
     EMERGENCY = "emergency"
-    OPD = "opd"
     CARDIOLOGY = "cardiology"
     DENTAL = "dental"
     ORTHOPEDICS = "orthopedics"
@@ -66,20 +65,6 @@ TRIAGE_DISCLAIMER = (
 
 
 ## Critical Symptoms (Emergency Override)
-#
-# Any symptom in this set forces UrgencyLevel.EMERGENCY regardless of severity or
-# any other classification logic. These are UNAMBIGUOUS, immediately life-threatening
-# presentations where any delay risks death.
-#
-# FIX (Bug B): Removed "chest_pain" and "shortness_of_breath" from this set.
-# These are HIGH-PRIORITY symptoms, but not unconditionally emergencies.
-# A mild chest wall strain, musculoskeletal ache, or anxiety-related SOB routed
-# straight to Emergency would overcrowd the ED and is clinically incorrect.
-# These now escalate via CRITICAL_SEVERITY_MARKERS ("severe" severity) instead,
-# so "severe chest pain" → Emergency, but "mild chest tightness" → Cardiology OPD.
-#
-# Kept here: conditions where ANY presentation, regardless of severity, is life-threatening
-# (cardiac arrest, stroke, anaphylaxis, poisoning, etc.).
 CRITICAL_SYMPTOMS: set[str] = {
     # Cardiac (unconditional — no mild presentation exists)
     "cardiac_arrest",
@@ -88,7 +73,7 @@ CRITICAL_SYMPTOMS: set[str] = {
 
     # Respiratory (unconditional airway emergencies)
     "choking",
-    "difficulty_breathing",   # distinct from mild shortness_of_breath
+    "difficulty_breathing",
 
     # Neurological
     "unconscious",
@@ -136,14 +121,6 @@ CRITICAL_SYMPTOMS: set[str] = {
 }
 
 # Severity-scoped emergency escalation.
-#
-# ONLY symptoms in this set escalate to Emergency when the LLM extracts severity="severe".
-# A severe toothache is not an emergency. A severe chest_pain is.
-#
-# Previously this was CRITICAL_SEVERITY_MARKERS = {"severe"}, which matched ANY symptom
-# the LLM rated as severe — including toothaches, back pain, and headaches from tension.
-# That caused massive over-triage to the ED. Now the check is:
-#   symptom.name in SEVERITY_ESCALATES_TO_EMERGENCY AND symptom.severity == Severity.SEVERE
 SEVERITY_ESCALATES_TO_EMERGENCY: set[str] = {
     "chest_pain",
     "shortness_of_breath",
@@ -349,9 +326,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "hemorrhoids": Department.GASTROENTEROLOGY,
 
     # Pulmonology — SPECIALIST only; acute/mild respiratory goes to OPD/General Medicine
-    # FIX (Bug F): Removed "cough" from Pulmonology. A simple cough with fever is a
-    # General Medicine / OPD presentation. Pulmonology is for chronic or complex
-    # respiratory disease. Only genuinely specialist-level symptoms remain here.
     "wheezing": Department.PULMONOLOGY,
     "chronic_cough": Department.PULMONOLOGY,
     "coughing_blood": Department.PULMONOLOGY,
@@ -499,26 +473,18 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "immune_deficiency": Department.ALLERGY_IMMUNOLOGY,
 
     # General Medicine — acute but non-specialist presentations
+    # General Medicine (non‑specialist, low‑acuity presentations)
+    "fever": Department.GENERAL_MEDICINE,
+    "fatigue": Department.GENERAL_MEDICINE,
+    "cold": Department.GENERAL_MEDICINE,
+    "flu": Department.GENERAL_MEDICINE,
+    "body_ache": Department.GENERAL_MEDICINE,
+    "general_weakness": Department.GENERAL_MEDICINE,
+    "malaise": Department.GENERAL_MEDICINE,
+    "dehydration": Department.GENERAL_MEDICINE,
+    "insomnia": Department.GENERAL_MEDICINE,
+    "weight_change": Department.GENERAL_MEDICINE,
     "hypertension": Department.GENERAL_MEDICINE,
-    "diabetes_follow_up": Department.GENERAL_MEDICINE,
-    "routine_checkup": Department.GENERAL_MEDICINE,
-    # FIX (Bug F): cough moved here from Pulmonology.
-    # A cough alone (or with fever) is a General Medicine presentation.
-    # The LLM will extract "chronic_cough" for patients who describe a long-standing issue,
-    # which correctly routes to Pulmonology via the mapping above.
-    "cough": Department.GENERAL_MEDICINE,
-
-    # OPD (general outpatient — non-specific, low-acuity)
-    "fever": Department.OPD,
-    "fatigue": Department.OPD,
-    "cold": Department.OPD,
-    "flu": Department.OPD,
-    "body_ache": Department.OPD,
-    "general_weakness": Department.OPD,
-    "malaise": Department.OPD,
-    "dehydration": Department.OPD,
-    "insomnia": Department.OPD,
-    "weight_change": Department.OPD,
 
     # Emergency
     # All CRITICAL_SYMPTOMS entries must have a mapping so the router never falls back to OPD for a life-threatening presentation.

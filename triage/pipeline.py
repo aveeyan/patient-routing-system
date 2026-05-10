@@ -263,7 +263,7 @@ def _build_triage_message(
         )
 
     # ── OPD / General Medicine ─────────────────────────────────────────────
-    if department in (Department.OPD, Department.GENERAL_MEDICINE):
+    if department == Department.GENERAL_MEDICINE:
         if urgency == UrgencyLevel.URGENT:
             return (
                 f"Based on your symptoms, I'd recommend you be seen today. "

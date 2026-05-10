@@ -14,20 +14,12 @@ from schemas.triage import ExtractedSymptoms
 #
 # These constants define the *minimum count* at which a condition escalates to URGENT.
 # Naming convention: _MIN_<SEVERITY>_FOR_URGENT means "at least this many of that severity → URGENT".
-#
-# FIX: The original constants were named "THRESHOLD" but used with >=, implying they are
-# inclusive lower bounds. Renamed to make the semantics unambiguous, preventing future
-# off-by-one errors when these values are adjusted.
 
 # Any single severe symptom triggers URGENT.
 _MIN_SEVERE_FOR_URGENT = 1
 
 # Two or more moderate symptoms trigger URGENT.
 _MIN_MODERATE_FOR_URGENT = 2
-
-# One moderate symptom among three or more total symptoms triggers URGENT.
-# (The moderate symptom + context of multiple complaints is a meaningful signal.)
-_MIN_TOTAL_WITH_MODERATE_FOR_URGENT = 3
 
 # Extraction confidence below this value triggers URGENT (erring on side of caution).
 _LOW_CONFIDENCE_THRESHOLD = 0.5
@@ -45,9 +37,8 @@ def classify_urgency(extracted: ExtractedSymptoms) -> UrgencyLevel:
     1. EMERGENCY: Already filtered by rules.py — never returned here.
     2. URGENT: Any severe symptom present.
     3. URGENT: Two or more moderate symptoms.
-    4. URGENT: One moderate symptom alongside 3+ total symptoms.
-    5. URGENT: Low extraction confidence (safe default).
-    6. ROUTINE: All other presentations.
+    4. URGENT: Low extraction confidence (safe default).
+    5. ROUTINE: All other presentations.
 
     Args:
         extracted: Normalized symptoms from the normalizer.
@@ -80,14 +71,6 @@ def classify_urgency(extracted: ExtractedSymptoms) -> UrgencyLevel:
 
     if moderate_count >= _MIN_MODERATE_FOR_URGENT:
         logger.info("Multiple moderate symptoms → URGENT", count=moderate_count)
-        return UrgencyLevel.URGENT
-
-    if moderate_count >= 1 and total_symptoms >= _MIN_TOTAL_WITH_MODERATE_FOR_URGENT:
-        logger.info(
-            "Moderate symptom alongside multiple complaints → URGENT",
-            moderate=moderate_count,
-            total=total_symptoms,
-        )
         return UrgencyLevel.URGENT
 
     if extracted.confidence < _LOW_CONFIDENCE_THRESHOLD:
