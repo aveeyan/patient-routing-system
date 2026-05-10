@@ -282,7 +282,7 @@ def _build_triage_message(
         return (
             f"Thank you for sharing that. Based on your symptoms, you should be seen today "
             f"by the {department_name} team. "
-            f"Please head to the General Medicine desk and ask for a referral to {department_name}. "
+            f"\nPlease head to the OPD desk and ask for a referral to {department_name}. "
             f"If your symptoms get significantly worse while waiting, let the staff know immediately."
         )
 
