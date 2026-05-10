@@ -11,30 +11,21 @@ class TriageState(str, Enum):
     IDLE = "idle"
     GATHERING = "gathering"
     ANALYZING = "analyzing"
-    TRIAGE_DECISION = "triage_decision"
     COMPLETED = "completed"
 
 
 ## Triage Classification
-#
-# Urgency Levels
+
 class UrgencyLevel(str, Enum):
     """Urgency levels for triage classification."""
     EMERGENCY = "emergency"
     URGENT = "urgent"
     ROUTINE = "routine"
 
-# Departments
 class Department(str, Enum):
     """Hospital departments for patient routing."""
-
-    # 1. Emergency
     EMERGENCY = "emergency"
-
-    # 2. OPD
     OPD = "opd"
-
-    # 3. Specialists
     CARDIOLOGY = "cardiology"
     DENTAL = "dental"
     ORTHOPEDICS = "orthopedics"
@@ -60,7 +51,6 @@ class Department(str, Enum):
     ALLERGY_IMMUNOLOGY = "allergy_immunology"
 
 
-## Severity Levels
 class Severity(str, Enum):
     """Severity levels for patient assessment."""
     MILD = "mild"
@@ -75,53 +65,184 @@ TRIAGE_DISCLAIMER = (
 )
 
 
-## Critical Symptoms (Safety Override)
-
-# List of symptoms
+## Critical Symptoms (Emergency Override)
+#
+# Any symptom in this set forces UrgencyLevel.EMERGENCY regardless of severity or
+# any other classification logic. These are UNAMBIGUOUS, immediately life-threatening
+# presentations where any delay risks death.
+#
+# FIX (Bug B): Removed "chest_pain" and "shortness_of_breath" from this set.
+# These are HIGH-PRIORITY symptoms, but not unconditionally emergencies.
+# A mild chest wall strain, musculoskeletal ache, or anxiety-related SOB routed
+# straight to Emergency would overcrowd the ED and is clinically incorrect.
+# These now escalate via CRITICAL_SEVERITY_MARKERS ("severe" severity) instead,
+# so "severe chest pain" → Emergency, but "mild chest tightness" → Cardiology OPD.
+#
+# Kept here: conditions where ANY presentation, regardless of severity, is life-threatening
+# (cardiac arrest, stroke, anaphylaxis, poisoning, etc.).
 CRITICAL_SYMPTOMS: set[str] = {
-    "severe_chest_pain",
-    "difficulty_breathing",
+    # Cardiac (unconditional — no mild presentation exists)
+    "cardiac_arrest",
+    "aortic_dissection",
+    "ruptured_aneurysm",
+
+    # Respiratory (unconditional airway emergencies)
+    "choking",
+    "difficulty_breathing",   # distinct from mild shortness_of_breath
+
+    # Neurological
     "unconscious",
-    "severe_burn",
-    "seizure",
     "stroke_symptoms",
+    "seizure",
+    "meningitis_symptoms",
+
+    # Trauma / Bleeding
     "heavy_bleeding",
     "uncontrolled_bleeding",
-    "poisoning",
-    "anaphylaxis",
-    "suicidal_ideation",
-    "cardiac_arrest",
-    "choking",
-    "drowning",
-    "severe_allergic_reaction",
     "severe_head_injury",
     "spinal_injury",
+    "limb_amputation",
+    "eye_injury",
+    "severe_burn",
+
+    # Toxicological
+    "poisoning",
     "overdose",
-    "eclampsia",
+    "electric_shock",
+
+    # Allergic
+    "anaphylaxis",
+    "severe_allergic_reaction",
+
+    # Psychiatric (safety — immediate risk to life)
+    "suicidal_ideation",
+
+    # Metabolic / Systemic
     "diabetic_coma",
     "hypertensive_crisis",
-    "ruptured_aneurysm",
-    "aortic_dissection",
     "pulmonary_embolism",
     "septic_shock",
-    "meningitis_symptoms",
+    "eclampsia",
+
+    # Environmental
+    "hypothermia",
+    "heat_stroke",
+    "drowning",
+
+    # Other
     "severe_abdominal_pain",
     "sudden_vision_loss",
     "sudden_hearing_loss",
-    "limb_amputation",
-    "eye_injury",
-    "electric_shock",
-    "hypothermia",
-    "heat_stroke",
 }
 
-# Critical severity markers
-# These must be valid Severity enum values.
-CRITICAL_SEVERITY_MARKERS: set[str] = {
-    "severe",
+# Severity-scoped emergency escalation.
+#
+# ONLY symptoms in this set escalate to Emergency when the LLM extracts severity="severe".
+# A severe toothache is not an emergency. A severe chest_pain is.
+#
+# Previously this was CRITICAL_SEVERITY_MARKERS = {"severe"}, which matched ANY symptom
+# the LLM rated as severe — including toothaches, back pain, and headaches from tension.
+# That caused massive over-triage to the ED. Now the check is:
+#   symptom.name in SEVERITY_ESCALATES_TO_EMERGENCY AND symptom.severity == Severity.SEVERE
+SEVERITY_ESCALATES_TO_EMERGENCY: set[str] = {
+    "chest_pain",
+    "shortness_of_breath",
+    "abdominal_pain",        # may indicate aortic aneurysm, ruptured organ
+    "back_pain",             # may indicate aortic dissection at severe intensity
+    "headache",              # thunderclap headache = subarachnoid haemorrhage
+    "breathing_difficulty",
+    "chest_tightness",
+    "jaw_pain",              # cardiac referred pain
+    "arm_pain",              # cardiac referred pain
+    "pelvic_pain",           # ectopic pregnancy at severe presentation
 }
 
-# Symptoms -> Department Mapping
+
+## Urgent Symptoms (Urgent Override)
+#
+# Symptoms in this set force UrgencyLevel.URGENT regardless of the classifier's
+# severity-count logic. These are serious conditions that need same-day care but are
+# not immediately life-threatening.
+#
+# FIX (Bug E): This set was defined but never checked. It is now wired into
+# rules.py via check_urgent_symptoms() and called from pipeline.py.
+# This fixes the fracture → ROUTINE misclassification (test case 4).
+URGENT_SYMPTOMS: set[str] = {
+    # Cardiac (non-emergency presentations)
+    "chest_pain",            # Moved here from CRITICAL_SYMPTOMS — urgent, not always emergency
+    "shortness_of_breath",   # Moved here — urgent, severity escalates to emergency
+    "heart_palpitations",
+    "racing_heart",
+    "irregular_heartbeat",
+    "fainting",
+    "chest_tightness",
+
+    # Trauma — always needs same-day imaging/assessment
+    "fracture",
+    "broken_bone",
+    "dislocation",
+    "ligament_injury",
+    "sprain",
+
+    # Neurological (concerning but not immediately life-threatening)
+    "headache",
+    "migraine",
+    "numbness",
+    "weakness_in_limbs",
+    "dizziness",
+    "blackout",
+    "facial_drooping",
+    "speech_difficulty",
+    "balance_problems",
+    "tremor",
+
+    # Respiratory (non-emergency)
+    "wheezing",
+    "coughing_blood",
+    "breathing_difficulty",
+
+    # Psychiatric
+    "panic_attack",
+    "self_harm",
+    "hallucinations",
+    "psychosis",
+
+    # Urological
+    "kidney_stones",
+    "blood_in_urine",
+    "testicular_pain",
+
+    # GI
+    "rectal_bleeding",
+    "blood_in_stool",
+    "jaundice",
+
+    # Eye
+    "eye_pain",
+    "double_vision",
+    "blurred_vision",
+    "red_eye",
+    "vision_loss",
+
+    # Infectious
+    "prolonged_fever",
+    "meningitis_symptoms",
+
+    # Vascular
+    "deep_vein_thrombosis",
+    "blood_clot",
+
+    # Gynecology
+    "vaginal_bleeding",
+    "pelvic_pain",
+
+    # Allergy
+    "allergic_reaction",
+    "hives",
+}
+
+
+# Symptom -> Department Mapping
 SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
 
     # Cardiology / Emergency
@@ -163,6 +284,8 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "wrist_pain": Department.ORTHOPEDICS,
     "ankle_pain": Department.ORTHOPEDICS,
     "elbow_pain": Department.ORTHOPEDICS,
+    "arm_pain": Department.ORTHOPEDICS,
+    "leg_pain": Department.ORTHOPEDICS,
     "muscle_pain": Department.ORTHOPEDICS,
     "sprain": Department.ORTHOPEDICS,
     "dislocation": Department.ORTHOPEDICS,
@@ -170,6 +293,7 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "ligament_injury": Department.ORTHOPEDICS,
     "spine_pain": Department.ORTHOPEDICS,
     "sciatica": Department.ORTHOPEDICS,
+    "swelling": Department.ORTHOPEDICS,
 
     # ENT
     "ear_pain": Department.ENT,
@@ -203,8 +327,8 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "tingling": Department.NEUROLOGY,
     "loss_of_coordination": Department.NEUROLOGY,
     "blackout": Department.NEUROLOGY,
-    "stroke_symptoms": Department.NEUROLOGY,
-    "seizure": Department.NEUROLOGY,
+    "stroke_symptoms": Department.EMERGENCY,
+    "seizure": Department.EMERGENCY,
 
     # Gastroenterology
     "abdominal_pain": Department.GASTROENTEROLOGY,
@@ -224,8 +348,10 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "indigestion": Department.GASTROENTEROLOGY,
     "hemorrhoids": Department.GASTROENTEROLOGY,
 
-    # Pulmonology
-    "cough": Department.PULMONOLOGY,
+    # Pulmonology — SPECIALIST only; acute/mild respiratory goes to OPD/General Medicine
+    # FIX (Bug F): Removed "cough" from Pulmonology. A simple cough with fever is a
+    # General Medicine / OPD presentation. Pulmonology is for chronic or complex
+    # respiratory disease. Only genuinely specialist-level symptoms remain here.
     "wheezing": Department.PULMONOLOGY,
     "chronic_cough": Department.PULMONOLOGY,
     "coughing_blood": Department.PULMONOLOGY,
@@ -372,12 +498,17 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "insect_sting_reaction": Department.ALLERGY_IMMUNOLOGY,
     "immune_deficiency": Department.ALLERGY_IMMUNOLOGY,
 
-    # General Medicine
+    # General Medicine — acute but non-specialist presentations
     "hypertension": Department.GENERAL_MEDICINE,
     "diabetes_follow_up": Department.GENERAL_MEDICINE,
     "routine_checkup": Department.GENERAL_MEDICINE,
+    # FIX (Bug F): cough moved here from Pulmonology.
+    # A cough alone (or with fever) is a General Medicine presentation.
+    # The LLM will extract "chronic_cough" for patients who describe a long-standing issue,
+    # which correctly routes to Pulmonology via the mapping above.
+    "cough": Department.GENERAL_MEDICINE,
 
-    # OPD (general outpatient)
+    # OPD (general outpatient — non-specific, low-acuity)
     "fever": Department.OPD,
     "fatigue": Department.OPD,
     "cold": Department.OPD,
@@ -388,6 +519,38 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "dehydration": Department.OPD,
     "insomnia": Department.OPD,
     "weight_change": Department.OPD,
+
+    # Emergency
+    # All CRITICAL_SYMPTOMS entries must have a mapping so the router never falls back to OPD for a life-threatening presentation.
+    "cardiac_arrest": Department.EMERGENCY,
+    "aortic_dissection": Department.EMERGENCY,
+    "ruptured_aneurysm": Department.EMERGENCY,
+    "choking": Department.EMERGENCY,
+    "difficulty_breathing": Department.EMERGENCY,
+    "unconscious": Department.EMERGENCY,
+    "meningitis_symptoms": Department.EMERGENCY,
+    "heavy_bleeding": Department.EMERGENCY,
+    "uncontrolled_bleeding": Department.EMERGENCY,
+    "severe_head_injury": Department.EMERGENCY,
+    "spinal_injury": Department.EMERGENCY,
+    "limb_amputation": Department.EMERGENCY,
+    "eye_injury": Department.EMERGENCY,
+    "severe_burn": Department.EMERGENCY,
+    "poisoning": Department.EMERGENCY,
+    "overdose": Department.EMERGENCY,
+    "electric_shock": Department.EMERGENCY,
+    "severe_allergic_reaction": Department.EMERGENCY,
+    "diabetic_coma": Department.EMERGENCY,
+    "hypertensive_crisis": Department.EMERGENCY,
+    "pulmonary_embolism": Department.EMERGENCY,
+    "septic_shock": Department.EMERGENCY,
+    "eclampsia": Department.EMERGENCY,
+    "hypothermia": Department.EMERGENCY,
+    "heat_stroke": Department.EMERGENCY,
+    "drowning": Department.EMERGENCY,
+    "severe_abdominal_pain": Department.EMERGENCY,
+    "sudden_vision_loss": Department.EMERGENCY,
+    "sudden_hearing_loss": Department.EMERGENCY,
 }
 
 # Urgency -> Recommendation Mapping

@@ -11,9 +11,7 @@ from schemas.triage import ExtractedSymptoms, Symptom
 
 
 ## Synonym Map
-# Maps common layperson terms and LLM variants to canonical symptom names
-# that exist as keys in core.constants.SYMPTOM_DEPARTMENT_MAP.
-# Only include terms NOT already present as keys in that map.
+# Maps common layperson terms and LLM variants to canonical symptom names that exist as keys in core.constants.SYMPTOM_DEPARTMENT_MAP.
 SYNONYM_MAP: dict[str, str] = {
 
     # Cardiac / Respiratory
@@ -59,6 +57,38 @@ SYNONYM_MAP: dict[str, str] = {
     "slurred_speech": "speech_difficulty",
     "drooping_face": "facial_drooping",
     "forgetfulness": "memory_loss",
+
+    # Trauma / Amputation / Bleeding
+    "lost_a_finger": "limb_amputation",
+    "lost_my_finger": "limb_amputation",
+    "finger_cut_off": "limb_amputation",
+    "finger_severed": "limb_amputation",
+    "severed_finger": "limb_amputation",
+    "lost_a_toe": "limb_amputation",
+    "lost_my_toe": "limb_amputation",
+    "lost_a_hand": "limb_amputation",
+    "lost_my_hand": "limb_amputation",
+    "lost_an_arm": "limb_amputation",
+    "lost_my_arm": "limb_amputation",
+    "lost_a_leg": "limb_amputation",
+    "lost_my_leg": "limb_amputation",
+    "limb_lost": "limb_amputation",
+    "digit_amputation": "limb_amputation",
+    "partial_amputation": "limb_amputation",
+    "traumatic_amputation": "limb_amputation",
+    "amputation": "limb_amputation",
+    "bleeding_wont_stop": "uncontrolled_bleeding",
+    "bleeding_not_stopping": "uncontrolled_bleeding",
+    "cant_stop_bleeding": "uncontrolled_bleeding",
+    "blood_not_stopping": "uncontrolled_bleeding",
+    "bleeding_continuously": "uncontrolled_bleeding",
+    "non_stop_bleeding": "uncontrolled_bleeding",
+    "profuse_bleeding": "uncontrolled_bleeding",
+    "severe_bleeding": "heavy_bleeding",
+    "lots_of_blood": "heavy_bleeding",
+    "bleeding_a_lot": "heavy_bleeding",
+    "gushing_blood": "heavy_bleeding",
+    "spurting_blood": "heavy_bleeding",
 
     # Ortho
     "cracked_bone": "fracture",

@@ -24,14 +24,13 @@ from schemas.triage import ExtractedSymptoms, Symptom
 ## Token Budgets
 # Extraction produces a small JSON object; 384 tokens is generous.
 _EXTRACTION_MAX_TOKENS = 384
-# Follow-up produces a single question; 128 tokens is more than enough.
-_FOLLOW_UP_MAX_TOKENS = 128
+# Follow-up produces a single question; 160 tokens allows for a warm acknowledgment + question.
+_FOLLOW_UP_MAX_TOKENS = 160
 
 ## Confidence Constants
 # Returned when extraction fails entirely (parse error, API error).
 _FAILED_CONFIDENCE = 0.0
 # Threshold below which low_confidence_reason must be populated.
-# Must match the threshold documented in ExtractedSymptoms.low_confidence_reason.
 _LOW_CONFIDENCE_THRESHOLD = 0.7
 
 ## Maximum conversation history turns to include as context.
@@ -47,13 +46,9 @@ async def extract_symptoms(
 ) -> ExtractedSymptoms:
     """Extract structured symptoms from a patient's message using the LLM.
 
-    Builds the extraction prompt, calls Azure OpenAI, parses the JSON
-    response, and validates it into an ExtractedSymptoms object.
-
     Args:
         user_message: The latest raw text from the patient.
         conversation_history: Previous turns in the conversation, if any.
-            Each dict has "role" ("user" or "bot") and "content" keys.
 
     Returns:
         ExtractedSymptoms with canonical symptom names, severity, duration,
@@ -73,6 +68,7 @@ async def extract_symptoms(
             system_prompt=SYMPTOM_EXTRACTION_PROMPT,
             user_message=prompt_text,
             max_tokens=_EXTRACTION_MAX_TOKENS,
+            temperature=0.1,  # Low temperature for deterministic structured extraction
         )
 
         parsed = _parse_json_response(raw_response)
@@ -105,40 +101,56 @@ async def generate_follow_up(
     symptoms_summary: str,
     missing_info: str,
     negated_symptoms: list[str],
+    conversation_history: Optional[list[dict[str, str]]] = None,
 ) -> str:
     """Generate ONE dynamic follow-up question to gather missing triage information.
 
-    Formats the follow-up prompt with what we know, what we need, and what
-    the patient has already denied, then calls the LLM to produce a single
-    natural-language question.
+    FIX (Bug A): Added conversation_history parameter. The history is now
+    injected into the system prompt so the LLM knows exactly what has already
+    been asked and answered — preventing repeated questions and the robotic,
+    stateless feeling of the original implementation.
+
+    FIX (Bug D): The FOLLOW_UP_PROMPT now includes a {conversation_history}
+    placeholder and instructs the LLM to acknowledge what the patient said
+    before asking the next question, giving responses a warmer, human feel.
 
     Args:
         symptoms_summary: Human-readable summary of what we have extracted.
-        missing_info: Description of what information is still needed.
+        missing_info: Clinical description of what information is still needed and why.
         negated_symptoms: Canonical names of symptoms already denied.
+        conversation_history: Full conversation history (role + content dicts).
+                              If None or empty, the prompt indicates a fresh conversation.
 
     Returns:
         A single follow-up question as a plain string.
     """
     negated_str = ", ".join(negated_symptoms) if negated_symptoms else "(none)"
 
+    # FIX (Bug A): Format conversation history for the prompt.
+    # The original generate_follow_up() had no history parameter at all.
+    history_str = _format_history_for_prompt(conversation_history)
+
     try:
-        prompt = FOLLOW_UP_PROMPT.format(
+        system_prompt = FOLLOW_UP_PROMPT.format(
+            conversation_history=history_str,
             symptoms_summary=symptoms_summary,
             missing_info=missing_info,
             negated_symptoms=negated_str,
         )
     except KeyError as exc:
         logger.error("FOLLOW_UP_PROMPT format key missing", key=str(exc))
-        return "Could you tell me more about what you are experiencing?"
+        return "Could you tell me a bit more about what you're experiencing?"
 
     logger.info("Generating follow-up question")
 
     try:
+        # The user message is intentionally minimal — all patient context
+        # lives in the system prompt to avoid duplication and rambling.
         question = await generate_response(
-            system_prompt=prompt,
-            user_message=f"Patient symptoms: {symptoms_summary}\nMissing information: {missing_info}",
+            system_prompt=system_prompt,
+            user_message="Please ask the next follow-up question now.",
             max_tokens=_FOLLOW_UP_MAX_TOKENS,
+            temperature=0.3,
         )
 
         question = question.strip().strip('"').strip("'")
@@ -148,10 +160,46 @@ async def generate_follow_up(
 
     except Exception as exc:
         logger.error("Follow-up generation failed, using fallback", error=str(exc))
-        return "Could you tell me more about what you are experiencing?"
+        return "Could you tell me a bit more about what you're experiencing?"
 
 
 ## Private Helpers — Input Construction
+
+
+def _format_history_for_prompt(
+    conversation_history: Optional[list[dict[str, str]]],
+) -> str:
+    """Format conversation history into a readable block for the follow-up prompt.
+
+    FIX (Bug A): New helper. Converts the raw role/content dicts into a
+    plain-text transcript the LLM can read to understand what was already
+    said, preventing repeated or contradictory questions.
+
+    Args:
+        conversation_history: List of {"role": "user"|"bot", "content": "..."} dicts.
+
+    Returns:
+        Formatted string like:
+            Patient: I have a toothache.
+            Mira: How long have you been experiencing this?
+            Patient: For about 2 days.
+        Or "(This is the start of the conversation.)" if history is empty.
+    """
+    if not conversation_history:
+        return "(This is the start of the conversation — no prior exchanges.)"
+
+    recent = conversation_history[-_MAX_HISTORY_TURNS:]
+    lines: list[str] = []
+
+    for turn in recent:
+        role = turn.get("role", "")
+        content = turn.get("content", "").strip()
+        if role == "user":
+            lines.append(f"Patient: {content}")
+        elif role == "bot":
+            lines.append(f"Samira: {content}")
+
+    return "\n".join(lines) if lines else "(This is the start of the conversation — no prior exchanges.)"
 
 
 def _build_extraction_input(
@@ -161,8 +209,7 @@ def _build_extraction_input(
     """Build the full input string for the extraction prompt.
 
     Prepends recent conversation history so the LLM has context about
-    what was already discussed. Truncates to _MAX_HISTORY_TURNS and logs
-    when truncation occurs.
+    what was already discussed.
 
     Args:
         user_message: The latest patient message.
@@ -172,7 +219,7 @@ def _build_extraction_input(
         Formatted string ready for the LLM.
     """
     if not conversation_history:
-        return f"User Message: {user_message}"
+        return f"Patient message: {user_message}"
 
     total_turns = len(conversation_history)
     if total_turns > _MAX_HISTORY_TURNS:
@@ -184,13 +231,13 @@ def _build_extraction_input(
 
     history_lines: list[str] = []
     for turn in conversation_history[-_MAX_HISTORY_TURNS:]:
-        role = "Patient" if turn["role"] == "user" else "Bot"
+        role = "Patient" if turn["role"] == "user" else "Samira"
         history_lines.append(f"{role}: {turn['content']}")
 
     history_text = "\n".join(history_lines)
     return (
         f"Conversation so far:\n{history_text}\n\n"
-        f"Latest User Message: {user_message}"
+        f"Latest patient message: {user_message}"
     )
 
 
@@ -200,10 +247,6 @@ def _build_extraction_input(
 def _parse_json_response(raw: str) -> dict:
     """Parse a JSON response from the LLM, handling common formatting issues.
 
-    LLMs frequently wrap JSON in markdown code blocks or include trailing
-    commas. This function applies progressively more aggressive recovery
-    strategies before giving up.
-
     Args:
         raw: Raw string response from the LLM.
 
@@ -212,7 +255,7 @@ def _parse_json_response(raw: str) -> dict:
     """
     cleaned = raw.strip()
 
-    # Strategy 1: Extract from markdown code blocks
+    # Strategy 1: Extract from markdown code blocks (LLMs sometimes add these)
     match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", cleaned, re.DOTALL)
     if match:
         cleaned = match.group(1).strip()
@@ -242,10 +285,6 @@ def _parse_json_response(raw: str) -> dict:
 
 def _validate_and_build(parsed: dict, raw_text: str) -> ExtractedSymptoms:
     """Build an ExtractedSymptoms from parsed JSON, validating along the way.
-
-    Drops unknown fields. Fills defaults for missing fields. Normalizes
-    symptom names to lowercase with underscores. Never raises — always
-    returns a valid ExtractedSymptoms, even if empty.
 
     Args:
         parsed: Parsed JSON dictionary from the LLM response.
@@ -294,17 +333,7 @@ def _validate_and_build(parsed: dict, raw_text: str) -> ExtractedSymptoms:
 
 
 def _build_symptom_list(raw_symptoms: list) -> list[Symptom]:
-    """Convert a list of raw symptom dicts into validated Symptom objects.
-
-    Logs a warning when severity is missing and uses "moderate" as a
-    conservative fallback, since missing severity is a data quality signal.
-
-    Args:
-        raw_symptoms: List of dicts from the LLM JSON.
-
-    Returns:
-        List of Symptom objects (invalid entries are skipped with a debug log).
-    """
+    """Convert a list of raw symptom dicts into validated Symptom objects."""
     symptoms: list[Symptom] = []
 
     for item in raw_symptoms:
@@ -335,14 +364,7 @@ def _build_symptom_list(raw_symptoms: list) -> list[Symptom]:
 
 
 def _build_negated_list(raw_negated: list) -> list[str]:
-    """Convert a list of raw negated symptom entries into canonical strings.
-
-    Args:
-        raw_negated: List of strings from the LLM JSON.
-
-    Returns:
-        List of normalized symptom name strings.
-    """
+    """Convert a list of raw negated symptom entries into canonical strings."""
     negated: list[str] = []
 
     for item in raw_negated:
@@ -353,14 +375,7 @@ def _build_negated_list(raw_negated: list) -> list[str]:
 
 
 def _clamp_confidence(value: object) -> float:
-    """Safely convert and clamp a confidence value to [0.0, 1.0].
-
-    Args:
-        value: Raw confidence value from the LLM (may be int, float, str, or None).
-
-    Returns:
-        Float in range [0.0, 1.0].
-    """
+    """Safely convert and clamp a confidence value to [0.0, 1.0]."""
     try:
         confidence = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
