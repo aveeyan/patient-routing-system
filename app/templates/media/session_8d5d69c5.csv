@@ -1,2 +1,0 @@
-id,state,urgency,severity,department,chief_complaint,turns,created_at,completed_at,recommendation
-"8d5d69c5-e06a-4aaf-9953-60c8bd35e09e","completed","emergency","severe","cardiology","","2","2026-05-10T12:45:57","2026-05-10T12:46:07.081240","Please visit the emergency department immediately."
