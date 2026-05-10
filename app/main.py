@@ -3,6 +3,7 @@
 """FastAPI application for the AI-Powered Patient Triage Chatbot."""
 
 # Standard Imports
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from fastapi.responses import HTMLResponse
 
 # Local Imports
 from app.api.routes.triage import router as triage_router
+from app.api.routes.speech import router as speech_router
+from ai.speech import _load_model
 from core.config import settings
 from core.logger import logger
 from db.session import engine
@@ -26,6 +29,12 @@ async def lifespan(app: FastAPI):
     logger.info("Starting up — creating database tables")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Warm up the Whisper model so the first patient request isn't slow
+    logger.info("Warming up Whisper model")
+    await asyncio.get_event_loop().run_in_executor(None, _load_model)
+    logger.info("Whisper model ready")
+
     yield
     logger.info("Shutting down")
     await engine.dispose()
@@ -49,6 +58,7 @@ app.add_middleware(
 )
 
 app.include_router(triage_router, prefix="/triage", tags=["Triage"])
+app.include_router(speech_router, prefix="/speech", tags=["Speech"])
 
 
 @app.get("/health")

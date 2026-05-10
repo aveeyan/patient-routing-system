@@ -325,6 +325,56 @@
             border-radius: 3px; padding: .05rem .3rem; font-size: .65rem;
         }
 
+        /* ── MIC BUTTON ── */
+        .mic-btn {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: #f0f4ff; border: 1.5px solid #dce3f0;
+            color: #6b7b95; font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0;
+            transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+        .mic-btn:hover:not(:disabled) { background: #e0eaff; border-color: #b8c7e0; color: #3a4a66; }
+        .mic-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+        /* Recording state */
+        .mic-btn.recording {
+            background: #fee2e2; border-color: #fca5a5; color: #ef4444;
+            box-shadow: 0 0 0 4px rgba(239,68,68,.15);
+            animation: mic-pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes mic-pulse {
+            0%,100% { box-shadow: 0 0 0 4px rgba(239,68,68,.15); }
+            50%      { box-shadow: 0 0 0 8px rgba(239,68,68,.05); }
+        }
+
+        /* Transcribing spinner state */
+        .mic-btn.transcribing {
+            background: #fffbeb; border-color: #fde68a; color: #b45309;
+            cursor: not-allowed;
+        }
+
+        /* Live waveform bar (shown while recording) */
+        .mic-wave {
+            display: none; align-items: center; gap: 2px;
+            height: 20px; padding: 0 .25rem;
+        }
+        .mic-wave.active { display: flex; }
+        .mic-wave span {
+            width: 3px; border-radius: 2px; background: #ef4444;
+            animation: wave-bar 0.8s ease-in-out infinite;
+            transform-origin: bottom;
+        }
+        .mic-wave span:nth-child(1) { height: 6px;  animation-delay: 0s;   }
+        .mic-wave span:nth-child(2) { height: 14px; animation-delay: .1s;  }
+        .mic-wave span:nth-child(3) { height: 10px; animation-delay: .2s;  }
+        .mic-wave span:nth-child(4) { height: 16px; animation-delay: .05s; }
+        .mic-wave span:nth-child(5) { height: 8px;  animation-delay: .15s; }
+        @keyframes wave-bar {
+            0%,100% { transform: scaleY(1);   opacity: .7; }
+            50%      { transform: scaleY(1.8); opacity: 1;  }
+        }
+
         @media (max-width: 767.98px) {
             .messages { padding: 1rem 1.25rem; }
             .chat-input-area { padding: .75rem 1.25rem 1rem; }
@@ -437,12 +487,20 @@
                 <div class="input-wrap">
                     <input type="text" id="messageInput"
                            placeholder="Describe your symptoms or answer the question above…"
-                           autocomplete="off" autofocus>
+                           autocomplete="off" autofocus disabled>
+                    <!-- Live waveform bars — shown while recording -->
+                    <div class="mic-wave" id="micWave">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <!-- Mic button -->
+                    <button class="mic-btn" id="micBtn" onclick="toggleRecording()" title="Click to record" disabled>
+                        <i class="bi bi-mic-fill" id="micIcon"></i>
+                    </button>
                     <button class="send-btn" onclick="sendMessage()" id="sendBtn">
                         <i class="bi bi-send-fill" style="font-size:.85rem; margin-left:2px;"></i>
                     </button>
                 </div>
-                <div class="input-hint">Press <kbd>Enter</kbd> to send</div>
+                <div class="input-hint" id="inputHint">Press <kbd>Enter</kbd> to send &nbsp;&middot;&nbsp; <i class="bi bi-mic" style="font-size:.65rem;"></i> mic to speak</div>
             </div>
         </div>
     </div>
@@ -475,6 +533,7 @@
                 sessionId  = data.session_id;
                 addMessage('bot', data.message);
                 setStatus('listening');
+                toggleInput(true);
             } catch {
                 addMessage('bot', 'Unable to connect to the server. Please refresh.');
             }
@@ -611,6 +670,7 @@
         function toggleInput(enabled) {
             document.getElementById('messageInput').disabled = !enabled;
             document.getElementById('sendBtn').disabled      = !enabled;
+            document.getElementById('micBtn').disabled       = !enabled;
             if (enabled) document.getElementById('messageInput').focus();
         }
 
@@ -727,6 +787,130 @@
 
         function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
         function timeNow()     { return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
+
+        /* ── MIC / SPEECH-TO-TEXT ── */
+        let mediaRecorder = null;
+        let audioChunks   = [];
+        let isRecording   = false;
+
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                await startRecording();
+            }
+        }
+
+        async function startRecording() {
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (err) {
+                setInputHint('Microphone access denied. Please allow mic access and try again.', 'danger');
+                return;
+            }
+
+            audioChunks = [];
+
+            // Prefer webm/opus; fall back to whatever the browser supports
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                ? 'audio/webm;codecs=opus'
+                : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+
+            mediaRecorder = mimeType
+                ? new MediaRecorder(stream, { mimeType })
+                : new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+            mediaRecorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); transcribeRecording(); };
+
+            mediaRecorder.start();
+            isRecording = true;
+            setMicState('recording');
+            setInputHint('Recording\u2026 click the mic again to stop.');
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            isRecording = false;
+            setMicState('transcribing');
+            setInputHint('Transcribing\u2026');
+        }
+
+        async function transcribeRecording() {
+            const mimeType = (mediaRecorder && mediaRecorder.mimeType) || 'audio/webm';
+            const blob     = new Blob(audioChunks, { type: mimeType });
+
+            // Reject silence / empty recordings (< 0.5 KB)
+            if (blob.size < 512) {
+                setMicState('idle');
+                setInputHint('No audio detected. Try again.', 'danger');
+                return;
+            }
+
+            const ext = mimeType.includes('mp4') ? 'mp4'
+                      : mimeType.includes('ogg')  ? 'ogg'
+                      :                             'webm';
+
+            const formData = new FormData();
+            formData.append('audio', blob, `recording.${ext}`);
+
+            try {
+                const res  = await fetch('/speech/transcribe', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+
+                // Populate the input box — patient reviews, then presses Enter / Send
+                const input = document.getElementById('messageInput');
+                input.value = data.text;
+                input.focus();
+                setMicState('idle');
+                setInputHint('\u2713 Transcribed \u2014 review and press Enter to send.');
+            } catch (err) {
+                console.error('Transcription error:', err);
+                setMicState('idle');
+                setInputHint(`Transcription failed: ${err.message}`, 'danger');
+            }
+        }
+
+        /* Visual state machine for the mic button */
+        function setMicState(state) {
+            const btn  = document.getElementById('micBtn');
+            const icon = document.getElementById('micIcon');
+            const wave = document.getElementById('micWave');
+
+            btn.classList.remove('recording', 'transcribing');
+            wave.classList.remove('active');
+            btn.disabled = false;
+
+            if (state === 'recording') {
+                btn.classList.add('recording');
+                icon.className = 'bi bi-stop-fill';
+                wave.classList.add('active');
+                btn.title = 'Click to stop recording';
+            } else if (state === 'transcribing') {
+                btn.classList.add('transcribing');
+                icon.className = 'bi bi-hourglass-split';
+                btn.disabled   = true;
+                btn.title      = 'Transcribing\u2026';
+            } else {
+                icon.className = 'bi bi-mic-fill';
+                btn.title      = 'Click to record';
+            }
+        }
+
+        function setInputHint(msg, type) {
+            const hint = document.getElementById('inputHint');
+            const defaultHtml = 'Press <kbd>Enter<\/kbd> to send &nbsp;&middot;&nbsp; <i class="bi bi-mic" style="font-size:.65rem;"><\/i> mic to speak';
+            hint.innerHTML = type === 'danger'
+                ? `<span style="color:#ef4444;">${msg}<\/span>`
+                : msg;
+            // Reset after 6 s unless actively recording
+            setTimeout(() => { if (!isRecording) hint.innerHTML = defaultHtml; }, 6000);
+        }
     </script>
 </body>
 </html>

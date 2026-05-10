@@ -18,7 +18,6 @@
             min-height: 100vh;
         }
 
-        /* ── TOPBAR ── */
         .topbar {
             background: #f0f4ff;
             height: 60px;
@@ -41,7 +40,7 @@
             gap: .45rem;
             text-decoration: none;
         }
-        .btn-back {
+        .btn-toolbar {
             background: #ffffff;
             border: 1px solid #dce3f0;
             border-radius: .625rem;
@@ -55,9 +54,8 @@
             transition: all 0.2s ease;
             text-decoration: none;
         }
-        .btn-back:hover { background: #f0f4ff; color: #1e3a5f; }
+        .btn-toolbar:hover { background: #f0f4ff; color: #1e3a5f; }
 
-        /* ── PAGE LAYOUT ── */
         .dashboard-container {
             max-width: 100%;
             margin: 1.5rem auto;
@@ -69,9 +67,8 @@
             color: #1e3a5f;
             margin-bottom: .35rem;
         }
-        .page-subtitle { font-size: .88rem; color: #6b7b95; margin-bottom: 1.5rem; }
+        .page-subtitle { font-size: .88rem; color: #6b7b95; margin-bottom: 1.25rem; }
 
-        /* ── CARD ── */
         .card-custom {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -82,7 +79,7 @@
             flex-direction: column;
         }
         .card-custom .card-header-custom {
-            padding: .875rem 1.25rem;
+            padding: .75rem 1.25rem;
             border-bottom: 1px solid #e2e8f0;
             font-size: .65rem;
             font-weight: 700;
@@ -91,13 +88,15 @@
             color: #6b7b95;
             background: transparent;
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .card-custom .card-body-custom {
             flex: 1;
             overflow-y: auto;
         }
 
-        /* ── SESSION TABLE ── */
         .session-table {
             width: 100%;
             border-collapse: separate;
@@ -139,7 +138,6 @@
         .badge-gathering  { background: #fffbeb; color: #b45309; border-color: #fde68a; }
         .badge-idle       { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
 
-        /* ── DETAIL PANEL ── */
         .detail-empty {
             display: flex;
             flex-direction: column;
@@ -201,7 +199,6 @@
         .detail-table td { padding: .4rem .65rem; }
         .detail-table td:first-child { font-weight: 600; width: 45%; }
 
-        /* Conversation preview */
         .conversation-preview {
             font-size: .8rem;
             display: flex;
@@ -214,33 +211,56 @@
         }
         .conversation-preview .turn.user { background: #e0eaff; }
         .conversation-preview .turn.bot  { background: #ffffff; border: 1px solid #e2e8f0; }
+
+        .btn-export {
+            background: transparent;
+            border: 1px solid #dce3f0;
+            border-radius: .5rem;
+            color: #6b7b95;
+            font-size: .68rem;
+            padding: .2rem .55rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+        }
+        .btn-export:hover { background: #f0f4ff; color: #1e3a5f; border-color: #b8c7e0; }
     </style>
 </head>
 <body>
 
-    <!-- ── TOPBAR ── -->
     <div class="topbar">
         <a class="topbar-brand" href="/">
             <i class="bi bi-heart-pulse-fill text-danger"></i>
             Patient Routing System
         </a>
-        <div class="ms-auto">
-            <a href="/" class="btn-back"><i class="bi bi-arrow-left"></i> Back to Chat</a>
+        <div class="ms-auto d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn-toolbar dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-download"></i> Export All
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#" onclick="exportAll('csv')"><i class="bi bi-filetype-csv me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportAll('json')"><i class="bi bi-filetype-json me-1"></i>JSON</a></li>
+                </ul>
+            </div>
+            <a href="/" class="btn-toolbar"><i class="bi bi-arrow-left"></i> Back to Chat</a>
         </div>
     </div>
 
-    <!-- ── DASHBOARD CONTENT ── -->
     <div class="dashboard-container">
         <h2 class="page-title">Session Dashboard</h2>
         <p class="page-subtitle">Review all patient triage sessions and their outcomes.</p>
 
-        <!-- Three-column layout -->
         <div class="row g-3" style="height: calc(100vh - 180px);">
 
             <!-- LEFT: Session History List -->
             <div class="col-lg-3">
                 <div class="card-custom">
-                    <div class="card-header-custom"><i class="bi bi-list-ul me-1"></i>Sessions</div>
+                    <div class="card-header-custom">
+                        <span><i class="bi bi-list-ul me-1"></i>Sessions</span>
+                    </div>
                     <div class="card-body-custom p-0">
                         <table class="session-table mb-0">
                             <thead>
@@ -255,9 +275,15 @@
             </div>
 
             <!-- MIDDLE: Session Information & Triage Result -->
-            <div class="col-lg-4">
+            <div class="col-lg-5">
                 <div class="card-custom" id="detailCard">
-                    <div class="card-header-custom"><i class="bi bi-info-circle me-1"></i>Session Info</div>
+                    <div class="card-header-custom">
+                        <span><i class="bi bi-info-circle me-1"></i>Session Info</span>
+                        <div id="exportSingleBtns" class="d-none d-flex gap-1">
+                            <button class="btn-export" onclick="exportSingle('csv')" title="Export as CSV"><i class="bi bi-filetype-csv"></i> CSV</button>
+                            <button class="btn-export" onclick="exportSingle('json')" title="Export as JSON"><i class="bi bi-filetype-json"></i> JSON</button>
+                        </div>
+                    </div>
                     <div class="card-body-custom" id="detailBody">
                         <div class="detail-empty">
                             <i class="bi bi-arrow-left-circle"></i>
@@ -268,7 +294,7 @@
             </div>
 
             <!-- RIGHT: Conversation History -->
-            <div class="col-lg-5">
+            <div class="col-lg-4">
                 <div class="card-custom" id="conversationCard">
                     <div class="card-header-custom"><i class="bi bi-chat-dots me-1"></i>Conversation</div>
                     <div class="card-body-custom" id="conversationBody">
@@ -286,6 +312,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let activeSessionId = null;
+        let allSessionsData = [];
+        let currentSessionData = null;
 
         loadSessions();
 
@@ -298,11 +326,173 @@
             });
         }
 
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        /* ── Export All Sessions ── */
+        async function exportAll(format) {
+            // Fetch all session histories
+            const sessions = allSessionsData;
+            const detailedSessions = [];
+
+            for (const s of sessions) {
+                try {
+                    const res = await fetch(`/triage/history/${s.session_id}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        detailedSessions.push(data);
+                    }
+                } catch (err) {
+                    // Skip failed fetches
+                }
+            }
+
+            if (format === 'csv') {
+                exportAllCSV(detailedSessions);
+            } else {
+                exportAllJSON(detailedSessions);
+            }
+        }
+
+        function exportAllCSV(sessions) {
+            const headers = [
+                'Session ID', 'State', 'Urgency', 'Severity', 'Department',
+                'Chief Complaint', 'Symptoms', 'Turns', 'Critical Override',
+                'Created At', 'Completed At', 'Recommendation', 'Disclaimer'
+            ];
+
+            const rows = sessions.map(s => {
+                const t = s.triage || {};
+                const e = s.triage ? {
+                    chief_complaint: '',
+                    extracted_symptoms: [],
+                    conversation_turns: s.messages ? s.messages.filter(m => m.role === 'user').length : 0
+                } : (s.encounter_summary || { chief_complaint: '', extracted_symptoms: [], conversation_turns: 0 });
+
+                return [
+                    s.session_id,
+                    s.state,
+                    t.urgency || '',
+                    t.severity || '',
+                    (t.department || '').replace(/_/g, ' '),
+                    e.chief_complaint || '',
+                    (e.extracted_symptoms || []).join('; '),
+                    e.conversation_turns || 0,
+                    t.is_critical_override ? 'Yes' : 'No',
+                    formatDateTime(s.created_at),
+                    formatDateTime(s.completed_at),
+                    t.recommendation || '',
+                    t.disclaimer || ''
+                ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+            });
+
+            const csv = [headers.join(','), ...rows].join('\n');
+            downloadFile(csv, `triage_sessions_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv');
+        }
+
+        function exportAllJSON(sessions) {
+            const exportData = sessions.map(s => ({
+                session_id: s.session_id,
+                state: s.state,
+                created_at: s.created_at,
+                completed_at: s.completed_at,
+                triage: s.triage || null,
+                messages: (s.messages || []).map(m => ({
+                    role: m.role,
+                    content: m.content,
+                    timestamp: m.timestamp
+                }))
+            }));
+
+            downloadFile(
+                JSON.stringify(exportData, null, 2),
+                `triage_sessions_${new Date().toISOString().slice(0,10)}.json`,
+                'application/json'
+            );
+        }
+
+        /* ── Export Single Session ── */
+        function exportSingle(format) {
+            if (!currentSessionData) return;
+
+            if (format === 'csv') {
+                exportSingleCSV(currentSessionData);
+            } else {
+                exportSingleJSON(currentSessionData);
+            }
+        }
+
+        function exportSingleCSV(data) {
+            const t = data.triage || {};
+            const messages = data.messages || [];
+            const userMessages = messages.filter(m => m.role === 'user');
+            const headers = [
+                'Session ID', 'State', 'Urgency', 'Severity', 'Department',
+                'Turns', 'Critical Override', 'Created At', 'Completed At',
+                'Recommendation', 'Disclaimer'
+            ];
+
+            const row = [
+                data.session_id, data.state,
+                t.urgency || '', t.severity || '', (t.department || '').replace(/_/g, ' '),
+                userMessages.length, t.is_critical_override ? 'Yes' : 'No',
+                formatDateTime(data.created_at), formatDateTime(data.completed_at),
+                t.recommendation || '', t.disclaimer || ''
+            ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+
+            // Add conversation
+            const msgRows = messages.map(m =>
+                `"${m.role}","${String(m.content).replace(/"/g, '""')}","${formatDateTime(m.timestamp)}"`
+            ).join('\n');
+
+            const csv = [
+                headers.join(','),
+                row,
+                '',
+                'Role,Message,Timestamp',
+                msgRows
+            ].join('\n');
+
+            downloadFile(csv, `session_${data.session_id.slice(0,8)}.csv`, 'text/csv');
+        }
+
+        function exportSingleJSON(data) {
+            const exportData = {
+                session_id: data.session_id,
+                state: data.state,
+                created_at: data.created_at,
+                completed_at: data.completed_at,
+                triage: data.triage || null,
+                messages: (data.messages || []).map(m => ({
+                    role: m.role,
+                    content: m.content,
+                    timestamp: m.timestamp
+                }))
+            };
+
+            downloadFile(
+                JSON.stringify(exportData, null, 2),
+                `session_${data.session_id.slice(0,8)}.json`,
+                'application/json'
+            );
+        }
+
+        /* ── Session Loading ── */
         async function loadSessions() {
             try {
                 const res = await fetch('/triage/sessions');
                 const data = await res.json();
-                renderSessions(data.sessions || []);
+                allSessionsData = data.sessions || [];
+                renderSessions(allSessionsData);
             } catch (err) {
                 document.getElementById('sessionTableBody').innerHTML =
                     '<tr><td colspan="2" class="text-danger text-center py-3">Failed to load.</td></tr>';
@@ -329,8 +519,8 @@
 
         async function loadSessionDetail(sessionId) {
             activeSessionId = sessionId;
+            currentSessionData = null;
 
-            // Highlight active row
             document.querySelectorAll('.session-table tbody tr').forEach(row => {
                 row.classList.remove('active-row');
             });
@@ -345,11 +535,16 @@
                 const res = await fetch(`/triage/history/${sessionId}`);
                 if (!res.ok) throw new Error('Not found');
                 const data = await res.json();
+                currentSessionData = data;
                 renderDetail(data);
                 renderConversation(data.messages || []);
+
+                // Show export buttons
+                document.getElementById('exportSingleBtns').classList.remove('d-none');
             } catch (err) {
                 detailBody.innerHTML = '<div class="detail-empty"><p class="text-danger">Failed to load details.</p></div>';
                 conversationBody.innerHTML = '<div class="detail-empty"><p class="text-danger">Failed to load conversation.</p></div>';
+                document.getElementById('exportSingleBtns').classList.add('d-none');
             }
         }
 
@@ -359,7 +554,6 @@
 
             let html = `<div class="p-3">`;
 
-            // Session metadata
             html += `
                 <div class="mb-3">
                     <div class="small text-muted">Session ID</div>
@@ -390,7 +584,6 @@
 
             html += '<hr>';
 
-            // Triage result
             if (triage) {
                 const urgencyColor = triage.urgency === 'emergency' ? 'emergency' :
                                      triage.urgency === 'urgent'    ? 'urgent' : 'routine';
@@ -426,7 +619,6 @@
             html += '</div>';
             detailBody.innerHTML = html;
 
-            // Re-highlight the active row
             const rows = document.querySelectorAll('.session-table tbody tr');
             rows.forEach(row => {
                 const cell = row.querySelector('td');
