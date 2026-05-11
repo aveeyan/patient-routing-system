@@ -239,7 +239,7 @@ def _build_triage_message(
         return (
             "I'm really glad you reached out, and I want you to know you're not alone. "
             "What you're going through sounds very difficult. "
-            "Please reach out to a mental health professional or a crisis line right away — "
+            "\nPlease reach out to a mental health professional or a crisis line right away — "
             "they are there to help, and you deserve support. "
             "If you feel you are in immediate danger, please go to the Emergency Department "
             "or call emergency services. You don't have to face this alone."
@@ -260,20 +260,20 @@ def _build_triage_message(
             f"Based on what you've described — {complaint} — this needs immediate attention. "
             f"Please go to the Emergency Department right away, "
             f"or call emergency services if you cannot travel safely. "
-            f"{dept_note}"
+            f"\n{dept_note}"
         )
 
     # ── General Medicine ──────────────────────────────────────────────────
     if department == Department.GENERAL_MEDICINE:
         if urgency == UrgencyLevel.URGENT:
             return (
-                f"Based on your symptoms, I'd recommend you be seen today. "
-                f"Please head to the General Medicine registration desk and let them know you need "
+                f"Based on your symptoms, I'd recommend you be seen today by the {department_name} team."
+                f"\nPlease head to the OPD registration desk and let them know you need "
                 f"a same-day appointment. Try not to delay this visit."
             )
         return (
             f"Based on what you've shared, a General Medicine appointment should be appropriate. "
-            f"You can register at the General Medicine desk and schedule an appointment at your convenience. "
+            f"\nYou can register at the OPD desk and schedule an appointment at your convenience. "
             f"If your symptoms worsen before then, please come in sooner."
         )
 
@@ -288,6 +288,6 @@ def _build_triage_message(
 
     return (
         f"I've noted your symptoms. A visit to the {department_name} department looks appropriate. "
-        f"\nPlease go to the General Medicine desk and ask them to book you an appointment with {department_name}. "
+        f"\nPlease go to the OPD desk and ask them to book you an appointment with {department_name}. "
         f"You can schedule this at a time that works for you."
     )
