@@ -11,7 +11,6 @@ from core.constants import (
     SEVERITY_ESCALATES_TO_EMERGENCY,
     URGENT_SYMPTOMS,
     Severity,
-    UrgencyLevel,
 )
 from schemas.triage import ExtractedSymptoms, Symptom
 
@@ -60,15 +59,6 @@ def check_critical_symptoms(symptoms: list[Symptom]) -> bool:
 def check_critical_severity(symptoms: list[Symptom]) -> bool:
     """Check if a high-acuity symptom is reported at severe intensity.
 
-    Previously this checked symptom.severity.value in CRITICAL_SEVERITY_MARKERS
-    where CRITICAL_SEVERITY_MARKERS = {"severe"} — matching ANY symptom the LLM
-    rated as severe, including toothaches and muscle aches. That caused massive
-    over-triage to Emergency.
-
-    Now checks: symptom is in SEVERITY_ESCALATES_TO_EMERGENCY AND severity == SEVERE.
-    Only clinically appropriate symptoms (chest_pain, shortness_of_breath, headache, etc.)
-    escalate to Emergency on severe intensity. A severe toothache stays in Dental.
-
     Args:
         symptoms: Active (non-negated) symptoms from _get_active_symptoms.
 
@@ -93,15 +83,6 @@ def check_critical_severity(symptoms: list[Symptom]) -> bool:
 def check_urgent_symptoms(symptoms: list[Symptom]) -> bool:
     """Check if any symptom name matches the urgent symptoms list.
 
-    FIX (Bug E): URGENT_SYMPTOMS was defined in constants.py but never called.
-    This function is the missing link. It is called from pipeline.py AFTER the
-    emergency check and BEFORE classify_urgency().
-
-    This solves the fracture → ROUTINE misclassification (test case 4):
-    - "I broke my arm" → fracture extracted at moderate severity (correct)
-    - One moderate symptom → classifier returns ROUTINE (wrong)
-    - fracture is in URGENT_SYMPTOMS → this function catches it → URGENT (correct)
-
     Args:
         symptoms: Active (non-negated) symptoms from _get_active_symptoms.
 
@@ -122,13 +103,6 @@ def check_urgent_symptoms(symptoms: list[Symptom]) -> bool:
 
 def is_emergency_override(extracted: ExtractedSymptoms) -> tuple[bool, bool]:
     """Combined check: should this case be forced to Emergency?
-
-    Computes the active symptom list once and passes it to both checks.
-    Either check returning True means this is an emergency override.
-
-    Returns a tuple of (is_emergency, is_mental_health_crisis) so the pipeline
-    can route suicidal ideation to a compassionate response path rather than the
-    generic "go to ED immediately" message, which is inappropriate for a distressed patient.
 
     Args:
         extracted: Normalized symptoms from the normalizer.
@@ -158,11 +132,6 @@ def is_emergency_override(extracted: ExtractedSymptoms) -> tuple[bool, bool]:
 
 def is_urgent_override(extracted: ExtractedSymptoms) -> bool:
     """Check if this case should be forced to Urgent (but not Emergency).
-
-    FIX (Bug E): New public function. Called from pipeline.py between the
-    emergency check and classify_urgency(). Returns True if any symptom is
-    in URGENT_SYMPTOMS, which forces UrgencyLevel.URGENT regardless of what
-    the count-based classifier would return.
 
     Args:
         extracted: Normalized symptoms from the normalizer.

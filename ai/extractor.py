@@ -105,15 +105,6 @@ async def generate_follow_up(
 ) -> str:
     """Generate ONE dynamic follow-up question to gather missing triage information.
 
-    FIX (Bug A): Added conversation_history parameter. The history is now
-    injected into the system prompt so the LLM knows exactly what has already
-    been asked and answered — preventing repeated questions and the robotic,
-    stateless feeling of the original implementation.
-
-    FIX (Bug D): The FOLLOW_UP_PROMPT now includes a {conversation_history}
-    placeholder and instructs the LLM to acknowledge what the patient said
-    before asking the next question, giving responses a warmer, human feel.
-
     Args:
         symptoms_summary: Human-readable summary of what we have extracted.
         missing_info: Clinical description of what information is still needed and why.
@@ -125,9 +116,6 @@ async def generate_follow_up(
         A single follow-up question as a plain string.
     """
     negated_str = ", ".join(negated_symptoms) if negated_symptoms else "(none)"
-
-    # FIX (Bug A): Format conversation history for the prompt.
-    # The original generate_follow_up() had no history parameter at all.
     history_str = _format_history_for_prompt(conversation_history)
 
     try:
@@ -144,8 +132,7 @@ async def generate_follow_up(
     logger.info("Generating follow-up question")
 
     try:
-        # The user message is intentionally minimal — all patient context
-        # lives in the system prompt to avoid duplication and rambling.
+        # The user message is intentionally minimal
         question = await generate_response(
             system_prompt=system_prompt,
             user_message="Please ask the next follow-up question now.",
@@ -170,10 +157,6 @@ def _format_history_for_prompt(
     conversation_history: Optional[list[dict[str, str]]],
 ) -> str:
     """Format conversation history into a readable block for the follow-up prompt.
-
-    FIX (Bug A): New helper. Converts the raw role/content dicts into a
-    plain-text transcript the LLM can read to understand what was already
-    said, preventing repeated or contradictory questions.
 
     Args:
         conversation_history: List of {"role": "user"|"bot", "content": "..."} dicts.
@@ -242,8 +225,6 @@ def _build_extraction_input(
 
 
 ## Private Helpers — JSON Parsing
-
-
 def _parse_json_response(raw: str) -> dict:
     """Parse a JSON response from the LLM, handling common formatting issues.
 
@@ -281,8 +262,6 @@ def _parse_json_response(raw: str) -> dict:
 
 
 ## Private Helpers — Validation
-
-
 def _validate_and_build(parsed: dict, raw_text: str) -> ExtractedSymptoms:
     """Build an ExtractedSymptoms from parsed JSON, validating along the way.
 

@@ -92,7 +92,7 @@ def _load_model() -> WhisperModel:
     model = WhisperModel(
         model_size,
         device="cpu",
-        compute_type="int8",  # Quantised — good speed/accuracy trade-off on CPU
+        compute_type="int8",
     )
 
     logger.info("faster-whisper model loaded", model_size=model_size)
@@ -109,14 +109,6 @@ async def transcribe_audio(
     language: Optional[str] = None,
 ) -> str:
     """Transcribe speech audio to text using faster-whisper (local Whisper).
-
-    Writes audio to a temporary file (faster-whisper requires a real path,
-    not a buffer), runs inference in a thread-pool executor so the asyncio
-    event loop is not blocked, then returns the joined transcript.
-
-    The result is intended to be placed directly into the chat input box
-    on the frontend and passed to the triage pipeline as a normal patient
-    message.
 
     Args:
         audio_bytes: Raw audio data.  Supported formats: WAV, MP3, MP4,
@@ -200,7 +192,7 @@ def _transcribe_sync(
     try:
         kwargs: dict = dict(
             beam_size=5,
-            vad_filter=True,  # Skip silent segments — reduces hallucinations
+            vad_filter=True,
             vad_parameters=dict(min_silence_duration_ms=500),
         )
         if language:
@@ -217,8 +209,7 @@ def _transcribe_sync(
         return " ".join(segment.text.strip() for segment in segments).strip()
 
     finally:
-        os.unlink(tmp_path)  # Always clean up, even on error
-
+        os.unlink(tmp_path)
 
 def _validate_audio(audio_bytes: bytes, content_type: Optional[str]) -> None:
     """Raise ValueError for empty, oversized, or unsupported audio payloads."""

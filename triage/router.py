@@ -11,16 +11,11 @@ from schemas.triage import ExtractedSymptoms, Symptom
 
 
 ## Routing Fallback
-# When no symptom maps to a known department, the router falls back to
-# General Medicine for safe, non-emergency handling.
+# When no symptom maps to a known department, the router falls back to General Medicine for safe, non-emergency handling.
 _FALLBACK_DEPARTMENT = Department.GENERAL_MEDICINE
 
 
 ## Department Priority
-# When multiple symptoms map to different departments, the department with
-# the lowest index in this list wins.
-# Note: Department.EMERGENCY has been removed — it is not a routing target.
-# Urgency level carries the "how fast" signal; department carries "which team".
 _DEPARTMENT_PRIORITY: list[Department] = [
     Department.CARDIOLOGY,
     Department.NEUROLOGY,
@@ -49,8 +44,6 @@ _DEPARTMENT_PRIORITY: list[Department] = [
 
 
 ## Startup Integrity Check
-# Ensures every Department value is represented in _DEPARTMENT_PRIORITY.
-# Catches drift when new departments are added to constants.py.
 def _validate_priority_list() -> None:
     all_departments = set(Department)
     prioritized = set(_DEPARTMENT_PRIORITY)

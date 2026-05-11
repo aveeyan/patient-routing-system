@@ -11,9 +11,6 @@ from schemas.triage import ExtractedSymptoms
 
 
 ## Classification Thresholds
-#
-# These constants define the *minimum count* at which a condition escalates to URGENT.
-# Naming convention: _MIN_<SEVERITY>_FOR_URGENT means "at least this many of that severity → URGENT".
 
 # Any single severe symptom triggers URGENT.
 _MIN_SEVERE_FOR_URGENT = 1
