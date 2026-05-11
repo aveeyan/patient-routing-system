@@ -6,11 +6,14 @@ Coordinates: extraction → normalization → rules → decision → persistence
 Single entry point for the API layer.
 """
 
+# Standard Imports
 from datetime import datetime, timezone
 
+# Third Party Imports
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Local Imports
 from ai.extractor import extract_symptoms, generate_follow_up
 from core.constants import (
     TRIAGE_DISCLAIMER,
@@ -45,9 +48,7 @@ from triage.router import route_to_department
 from triage.rules import is_emergency_override, is_urgent_override
 
 
-# ----- Public API -----
-
-
+# Public API
 async def start_session(db: AsyncSession) -> StartSessionResponse:
     """Create a new triage session."""
     session = await create_session(db)
@@ -90,8 +91,6 @@ async def process_message(
 
     # Safety check — emergency first.
     # is_emergency_override now returns (is_emergency, is_mental_health_crisis).
-    # The second flag routes suicidal ideation to a compassionate message
-    # instead of the generic "go to ED immediately" response.
     is_emergency, is_mental_health_crisis = is_emergency_override(normalized)
 
     # Check urgent override BEFORE the classifier.
@@ -110,31 +109,22 @@ async def process_message(
             is_mental_health_crisis, turn_count
         )
 
-    # FIX (Bug A): Pass history_dicts to _ask_follow_up so it can be forwarded
-    # to generate_follow_up(). Without this, the bot had no memory of what it
-    # already asked, causing repeated and robotic questions.
     return await _ask_follow_up(db, session_id, normalized, history_dicts)
 
 
-# ----- Private -----
-
-
+# Private
 async def _ask_follow_up(
     db: AsyncSession,
     session_id: str,
     normalized: ExtractedSymptoms,
     conversation_history: list[dict[str, str]],
 ) -> BotResponse:
-    """Generate and persist a follow-up question.
-
-    FIX (Bug A): conversation_history is now accepted and passed to
-    generate_follow_up(), which injects it into the FOLLOW_UP_PROMPT so
-    the LLM knows what has already been said and does not repeat itself.
+    """
+    Generate and persist a follow-up question.
     """
     summary = build_symptoms_summary(normalized)
     missing = build_missing_info(normalized)
 
-    # FIX (Bug A): Pass history so the LLM can see the full conversation.
     question = await generate_follow_up(
         symptoms_summary=summary,
         missing_info=missing,
@@ -232,9 +222,7 @@ def _build_triage_message(
         else "your symptoms"
     )
 
-    # ── Mental health crisis ───────────────────────────────────────────────
-    # Suicidal ideation and active self-harm must never receive the generic
-    # "go to ED immediately" message — a distressed patient needs warmth first.
+    # Mental Health Crisis
     if is_mental_health_crisis:
         return (
             "I'm really glad you reached out, and I want you to know you're not alone. "
@@ -245,7 +233,7 @@ def _build_triage_message(
             "or call emergency services. You don't have to face this alone."
         )
 
-    # ── Emergency ──────────────────────────────────────────────────────────
+    # Emergency
     if urgency == UrgencyLevel.EMERGENCY:
         if department == Department.GENERAL_MEDICINE:
             # Generic emergency — no specific specialist to name
@@ -263,7 +251,7 @@ def _build_triage_message(
             f"\n{dept_note}"
         )
 
-    # ── General Medicine ──────────────────────────────────────────────────
+    # General Medicine
     if department == Department.GENERAL_MEDICINE:
         if urgency == UrgencyLevel.URGENT:
             return (
@@ -277,7 +265,7 @@ def _build_triage_message(
             f"If your symptoms worsen before then, please come in sooner."
         )
 
-    # ── Specialist departments ─────────────────────────────────────────────
+    # Department (Specialists)
     if urgency == UrgencyLevel.URGENT:
         return (
             f"Thank you for sharing that. Based on your symptoms, you should be seen today "

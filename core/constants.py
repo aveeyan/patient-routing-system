@@ -130,20 +130,20 @@ CRITICAL_SYMPTOMS: set[str] = {
 SEVERITY_ESCALATES_TO_EMERGENCY: set[str] = {
     "chest_pain",
     "shortness_of_breath",
-    "abdominal_pain",        # may indicate aortic aneurysm, ruptured organ
-    "back_pain",             # may indicate aortic dissection at severe intensity
-    "headache",              # thunderclap headache = subarachnoid haemorrhage
+    "abdominal_pain",
+    "back_pain",
+    "headache",
     "breathing_difficulty",
     "chest_tightness",
-    "pelvic_pain",           # ectopic pregnancy at severe presentation
+    "pelvic_pain",
 }
 
 
 ## Urgent Symptoms (Urgent Override)
 URGENT_SYMPTOMS: set[str] = {
     # Cardiac (non-emergency presentations)
-    "chest_pain",            # Moved here from CRITICAL_SYMPTOMS — urgent, not always emergency
-    "shortness_of_breath",   # Moved here — urgent, severity escalates to emergency
+    "chest_pain",
+    "shortness_of_breath",
     "heart_palpitations",
     "racing_heart",
     "irregular_heartbeat",
@@ -322,9 +322,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "hemorrhoids": Department.GASTROENTEROLOGY,
 
     # Pulmonology — SPECIALIST only; acute/mild respiratory goes to General Medicine
-    # FIX (Bug F): Removed "cough" from Pulmonology. A simple cough with fever is a
-    # General Medicine presentation. Pulmonology is for chronic or complex
-    # respiratory disease. Only genuinely specialist-level symptoms remain here.
     "wheezing": Department.PULMONOLOGY,
     "chronic_cough": Department.PULMONOLOGY,
     "coughing_blood": Department.PULMONOLOGY,
@@ -475,13 +472,7 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "hypertension": Department.GENERAL_MEDICINE,
     "diabetes_follow_up": Department.GENERAL_MEDICINE,
     "routine_checkup": Department.GENERAL_MEDICINE,
-    # FIX (Bug F): cough moved here from Pulmonology.
-    # A cough alone (or with fever) is a General Medicine presentation.
-    # The LLM will extract "chronic_cough" for patients who describe a long-standing issue,
-    # which correctly routes to Pulmonology via the mapping above.
     "cough": Department.GENERAL_MEDICINE,
-
-    # General Medicine (non-specialist, low-acuity presentations)
     "fever": Department.GENERAL_MEDICINE,
     "fatigue": Department.GENERAL_MEDICINE,
     "cold": Department.GENERAL_MEDICINE,
@@ -493,11 +484,7 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "insomnia": Department.GENERAL_MEDICINE,
     "weight_change": Department.GENERAL_MEDICINE,
 
-    # Critical symptoms — mapped to their CLINICAL department, not Department.EMERGENCY.
-    # Department.EMERGENCY is not a ward patients walk into; it is an urgency signal.
-    # The UrgencyLevel.EMERGENCY flag (set by rules.py) is what tells the patient
-    # to go immediately. The department here tells them — and the ED triage desk —
-    # WHICH clinical team needs to see them.
+    # Critical symptoms
     "cardiac_arrest": Department.CARDIOLOGY,
     "aortic_dissection": Department.VASCULAR_SURGERY,
     "ruptured_aneurysm": Department.VASCULAR_SURGERY,
