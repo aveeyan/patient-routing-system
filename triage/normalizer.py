@@ -9,12 +9,10 @@ from loguru import logger
 from core.constants import SYMPTOM_DEPARTMENT_MAP
 from schemas.triage import ExtractedSymptoms, Symptom
 
-
 ## Synonym Map
 # Maps common layperson terms and LLM variants to canonical symptom names that exist as keys in core.constants.SYMPTOM_DEPARTMENT_MAP.
 # Only include terms NOT already present as keys in that map.
 SYNONYM_MAP: dict[str, str] = {
-
     # Cardiac / Respiratory
     "breathlessness": "shortness_of_breath",
     "cannot_breathe": "breathing_difficulty",
@@ -25,7 +23,6 @@ SYNONYM_MAP: dict[str, str] = {
     "racing_heartbeat": "racing_heart",
     "slow_heartbeat": "slow_heart_rate",
     "passing_out": "fainting",
-
     # Gastro
     "stomach_pain": "abdominal_pain",
     "stomach_ache": "abdominal_pain",
@@ -40,13 +37,11 @@ SYNONYM_MAP: dict[str, str] = {
     "acid_coming_up": "acid_reflux",
     "cant_swallow": "difficulty_swallowing",
     "trouble_swallowing": "difficulty_swallowing",
-
     # Dental
     "pain_in_tooth": "toothache",
     "cavity_pain": "toothache",
     "sensitive_tooth": "tooth_sensitivity",
     "bleeding_gums": "gum_bleeding",
-
     # Neuro
     "feeling_dizzy": "dizziness",
     "lightheaded": "dizziness",
@@ -58,7 +53,6 @@ SYNONYM_MAP: dict[str, str] = {
     "slurred_speech": "speech_difficulty",
     "drooping_face": "facial_drooping",
     "forgetfulness": "memory_loss",
-
     # Trauma / Amputation / Bleeding
     "lost_a_finger": "limb_amputation",
     "lost_my_finger": "limb_amputation",
@@ -90,7 +84,6 @@ SYNONYM_MAP: dict[str, str] = {
     "bleeding_a_lot": "heavy_bleeding",
     "gushing_blood": "heavy_bleeding",
     "spurting_blood": "heavy_bleeding",
-
     # Ortho — Fractures
     "cracked_bone": "fracture",
     "bone_fracture": "fracture",
@@ -127,7 +120,6 @@ SYNONYM_MAP: dict[str, str] = {
     "twisted_wrist": "sprain",
     "torn_ligament": "ligament_injury",
     "torn_tendon": "tendon_pain",
-
     # ENT
     "earache": "ear_pain",
     "runny_nose": "nasal_congestion",
@@ -139,7 +131,6 @@ SYNONYM_MAP: dict[str, str] = {
     "pain_when_swallowing": "swallowing_difficulty",
     "cant_smell": "loss_of_smell",
     "cant_taste": "loss_of_taste",
-
     # Urology
     "hurts_to_pee": "painful_urination",
     "burning_urination": "painful_urination",
@@ -148,14 +139,12 @@ SYNONYM_MAP: dict[str, str] = {
     "cant_hold_urine": "urinary_incontinence",
     "testicle_pain": "testicular_pain",
     "kidney_stone_pain": "kidney_stones",
-
     # Ophthalmology
     "blurry_vision": "blurred_vision",
     "seeing_double": "double_vision",
     "sensitive_to_light": "light_sensitivity",
     "itchy_eyes": "dry_eyes",
     "puffy_eyes": "eye_swelling",
-
     # Dermatology
     "itchy_skin": "itching",
     "skin_irritation": "rash",
@@ -166,7 +155,6 @@ SYNONYM_MAP: dict[str, str] = {
     "balding": "hair_loss",
     "thinning_hair": "hair_loss",
     "sweating_excessively": "excessive_sweating",
-
     # Psychiatry
     "feeling_down": "depression",
     "hopeless": "depression",
@@ -178,7 +166,6 @@ SYNONYM_MAP: dict[str, str] = {
     "cutting_myself": "self_harm",
     "want_to_die": "suicidal_ideation",
     "suicidal_thoughts": "suicidal_ideation",
-
     # General
     "high_temp": "fever",
     "temperature": "fever",
@@ -195,7 +182,6 @@ SYNONYM_MAP: dict[str, str] = {
     "high_blood_pressure": "hypertension",
     "losing_weight": "weight_change",
     "gaining_weight": "weight_change",
-
     # Gynecology
     "period_pain": "menstrual_pain",
     "cramps": "menstrual_pain",
@@ -203,7 +189,6 @@ SYNONYM_MAP: dict[str, str] = {
     "spotting": "vaginal_bleeding",
     "lump_in_breast": "breast_lump",
     "sore_breast": "breast_pain",
-
     # Infectious Disease
     "long_fever": "prolonged_fever",
     "malaria": "malaria_symptoms",
@@ -212,13 +197,11 @@ SYNONYM_MAP: dict[str, str] = {
     "tb": "tuberculosis_symptoms",
     "sti": "sexually_transmitted_infection",
     "std": "sexually_transmitted_infection",
-
     # Other
     "allergy_attack": "allergic_reaction",
     "severe_allergy": "anaphylaxis",
     "swollen_glands": "swollen_lymph_nodes",
     "bruise_easily": "easy_bruising",
-
     # Self Harm
     "suicidal": "suicidal_ideation",
     "feeling_suicidal": "suicidal_ideation",
@@ -252,13 +235,9 @@ _validate_synonym_map()
 
 ## Public API
 
+
 def normalize(extracted: ExtractedSymptoms) -> ExtractedSymptoms:
     """Normalize symptom names in an ExtractedSymptoms object.
-
-    Maps common variants and layperson terms to canonical symptom names
-    that exist as keys in SYMPTOM_DEPARTMENT_MAP. Symptoms already using
-    canonical names pass through unchanged. Unknown symptoms are passed
-    through with a warning.
 
     Args:
         extracted: The extracted symptoms from the AI layer.
@@ -267,8 +246,12 @@ def normalize(extracted: ExtractedSymptoms) -> ExtractedSymptoms:
         A new ExtractedSymptoms with normalized symptom names.
     """
     normalized_primary = [_normalize_symptom(s) for s in extracted.primary_symptoms]
-    normalized_associated = [_normalize_symptom(s) for s in extracted.associated_symptoms]
-    normalized_negated = [_normalize_negated(name) for name in extracted.negated_symptoms]
+    normalized_associated = [
+        _normalize_symptom(s) for s in extracted.associated_symptoms
+    ]
+    normalized_negated = [
+        _normalize_negated(name) for name in extracted.negated_symptoms
+    ]
 
     return ExtractedSymptoms(
         primary_symptoms=normalized_primary,
@@ -281,6 +264,7 @@ def normalize(extracted: ExtractedSymptoms) -> ExtractedSymptoms:
 
 
 ## Private Helpers
+
 
 def _normalize_symptom(symptom: Symptom) -> Symptom:
     """Normalize a single Symptom's name using the synonym map.

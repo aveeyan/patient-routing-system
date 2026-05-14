@@ -2,7 +2,6 @@
 
 """Prompt templates for LLM interactions."""
 
-
 SYMPTOM_EXTRACTION_PROMPT = """\
 ### Role
 You are a clinical symptom extraction system.
@@ -30,7 +29,7 @@ Your output MUST be reliable and conservative.
 
 1. NEVER invent symptoms
 2. NEVER omit clearly stated symptoms
-3. When uncertain → increase severity slightly and LOWER confidence
+3. When uncertain, then increase severity slightly and LOWER confidence
 4. Prefer STANDARDIZED canonical names over creating new ones
 5. Prioritize signals that affect triage:
    - severity

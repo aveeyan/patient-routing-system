@@ -8,6 +8,7 @@ from enum import Enum
 ## Triage Conversion States
 class TriageState(str, Enum):
     """States for the conversation state machine."""
+
     IDLE = "idle"
     GATHERING = "gathering"
     ANALYZING = "analyzing"
@@ -15,22 +16,19 @@ class TriageState(str, Enum):
 
 
 ## Triage Classification
-
 class UrgencyLevel(str, Enum):
     """Urgency levels for triage classification."""
+
     EMERGENCY = "emergency"
     URGENT = "urgent"
     ROUTINE = "routine"
 
-class Department(str, Enum):
-    """Hospital departments for patient routing.
 
-    These are the CLINICAL destinations a patient is sent to.
-    Department.EMERGENCY has been intentionally removed — it was never a real
-    ward. How fast a patient needs to get there is carried by UrgencyLevel
-    (EMERGENCY / URGENT / ROUTINE). The department here tells them which
-    clinical team to ask for when they arrive.
+class Department(str, Enum):
     """
+    Hospital departments for patient routing.
+    """
+
     CARDIOLOGY = "cardiology"
     DENTAL = "dental"
     ORTHOPEDICS = "orthopedics"
@@ -58,6 +56,7 @@ class Department(str, Enum):
 
 class Severity(str, Enum):
     """Severity levels for patient assessment."""
+
     MILD = "mild"
     MODERATE = "moderate"
     SEVERE = "severe"
@@ -76,17 +75,14 @@ CRITICAL_SYMPTOMS: set[str] = {
     "cardiac_arrest",
     "aortic_dissection",
     "ruptured_aneurysm",
-
     # Respiratory (unconditional airway emergencies)
     "choking",
-    "difficulty_breathing",   # distinct from mild shortness_of_breath
-
+    "difficulty_breathing",  # distinct from mild shortness_of_breath
     # Neurological
     "unconscious",
     "stroke_symptoms",
     "seizure",
     "meningitis_symptoms",
-
     # Trauma / Bleeding
     "heavy_bleeding",
     "uncontrolled_bleeding",
@@ -95,31 +91,25 @@ CRITICAL_SYMPTOMS: set[str] = {
     "limb_amputation",
     "eye_injury",
     "severe_burn",
-
     # Toxicological
     "poisoning",
     "overdose",
     "electric_shock",
-
     # Allergic
     "anaphylaxis",
     "severe_allergic_reaction",
-
     # Psychiatric (safety — immediate risk to life)
     "suicidal_ideation",
-
     # Metabolic / Systemic
     "diabetic_coma",
     "hypertensive_crisis",
     "pulmonary_embolism",
     "septic_shock",
     "eclampsia",
-
     # Environmental
     "hypothermia",
     "heat_stroke",
     "drowning",
-
     # Other
     "severe_abdominal_pain",
     "sudden_vision_loss",
@@ -149,14 +139,12 @@ URGENT_SYMPTOMS: set[str] = {
     "irregular_heartbeat",
     "fainting",
     "chest_tightness",
-
     # Trauma — always needs same-day imaging/assessment
     "fracture",
     "broken_bone",
     "dislocation",
     "ligament_injury",
     "sprain",
-
     # Neurological (concerning but not immediately life-threatening)
     "headache",
     "migraine",
@@ -168,47 +156,38 @@ URGENT_SYMPTOMS: set[str] = {
     "speech_difficulty",
     "balance_problems",
     "tremor",
-
     # Respiratory (non-emergency)
     "wheezing",
     "coughing_blood",
     "breathing_difficulty",
-
     # Psychiatric
     "panic_attack",
     "self_harm",
     "hallucinations",
     "psychosis",
-
     # Urological
     "kidney_stones",
     "blood_in_urine",
     "testicular_pain",
-
     # GI
     "rectal_bleeding",
     "blood_in_stool",
     "jaundice",
-
     # Eye
     "eye_pain",
     "double_vision",
     "blurred_vision",
     "red_eye",
     "vision_loss",
-
     # Infectious
     "prolonged_fever",
     "meningitis_symptoms",
-
     # Vascular
     "deep_vein_thrombosis",
     "blood_clot",
-
     # Gynecology
     "vaginal_bleeding",
     "pelvic_pain",
-
     # Allergy
     "allergic_reaction",
     "hives",
@@ -217,7 +196,6 @@ URGENT_SYMPTOMS: set[str] = {
 
 # Symptom -> Department Mapping
 SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
-
     # Cardiology / Emergency
     "chest_pain": Department.CARDIOLOGY,
     "heart_palpitations": Department.CARDIOLOGY,
@@ -230,7 +208,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "ankle_swelling": Department.CARDIOLOGY,
     "leg_swelling": Department.CARDIOLOGY,
     "fainting": Department.CARDIOLOGY,
-
     # Dental
     "tooth_pain": Department.DENTAL,
     "toothache": Department.DENTAL,
@@ -243,7 +220,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "mouth_sore": Department.DENTAL,
     "tooth_sensitivity": Department.DENTAL,
     "swollen_gums": Department.DENTAL,
-
     # Orthopedics
     "fracture": Department.ORTHOPEDICS,
     "broken_bone": Department.ORTHOPEDICS,
@@ -267,7 +243,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "spine_pain": Department.ORTHOPEDICS,
     "sciatica": Department.ORTHOPEDICS,
     "swelling": Department.ORTHOPEDICS,
-
     # ENT
     "ear_pain": Department.ENT,
     "sore_throat": Department.ENT,
@@ -284,7 +259,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "throat_lump": Department.ENT,
     "snoring": Department.ENT,
     "sleep_apnea": Department.ENT,
-
     # Neurology
     "headache": Department.NEUROLOGY,
     "migraine": Department.NEUROLOGY,
@@ -302,7 +276,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "blackout": Department.NEUROLOGY,
     "stroke_symptoms": Department.NEUROLOGY,
     "seizure": Department.NEUROLOGY,
-
     # Gastroenterology
     "abdominal_pain": Department.GASTROENTEROLOGY,
     "nausea": Department.GASTROENTEROLOGY,
@@ -320,7 +293,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "stomach_cramps": Department.GASTROENTEROLOGY,
     "indigestion": Department.GASTROENTEROLOGY,
     "hemorrhoids": Department.GASTROENTEROLOGY,
-
     # Pulmonology — SPECIALIST only; acute/mild respiratory goes to General Medicine
     "wheezing": Department.PULMONOLOGY,
     "chronic_cough": Department.PULMONOLOGY,
@@ -331,7 +303,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "sleep_disordered_breathing": Department.PULMONOLOGY,
     "oxygen_saturation_low": Department.PULMONOLOGY,
     "hyperventilation": Department.PULMONOLOGY,
-
     # Dermatology
     "rash": Department.DERMATOLOGY,
     "skin_rash": Department.DERMATOLOGY,
@@ -348,7 +319,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "skin_discoloration": Department.DERMATOLOGY,
     "blistering": Department.DERMATOLOGY,
     "excessive_sweating": Department.DERMATOLOGY,
-
     # Urology
     "painful_urination": Department.UROLOGY,
     "frequent_urination": Department.UROLOGY,
@@ -360,7 +330,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "erectile_dysfunction": Department.UROLOGY,
     "urinary_retention": Department.UROLOGY,
     "kidney_stones": Department.UROLOGY,
-
     # Ophthalmology
     "eye_pain": Department.OPHTHALMOLOGY,
     "blurred_vision": Department.OPHTHALMOLOGY,
@@ -372,7 +341,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "vision_loss": Department.OPHTHALMOLOGY,
     "dry_eyes": Department.OPHTHALMOLOGY,
     "eye_swelling": Department.OPHTHALMOLOGY,
-
     # Endocrinology
     "excessive_thirst": Department.ENDOCRINOLOGY,
     "excessive_hunger": Department.ENDOCRINOLOGY,
@@ -384,7 +352,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "blood_sugar_abnormality": Department.ENDOCRINOLOGY,
     "hormonal_imbalance": Department.ENDOCRINOLOGY,
     "adrenal_symptoms": Department.ENDOCRINOLOGY,
-
     # Psychiatry
     "suicidal_ideation": Department.PSYCHIATRY,
     "anxiety": Department.PSYCHIATRY,
@@ -398,14 +365,12 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "sleep_disorder": Department.PSYCHIATRY,
     "mood_swings": Department.PSYCHIATRY,
     "substance_abuse": Department.PSYCHIATRY,
-
     # Nephrology
     "kidney_failure": Department.NEPHROLOGY,
     "decreased_urine_output": Department.NEPHROLOGY,
     "swollen_face": Department.NEPHROLOGY,
     "protein_in_urine": Department.NEPHROLOGY,
     "dialysis_related": Department.NEPHROLOGY,
-
     # Rheumatology
     "joint_swelling": Department.RHEUMATOLOGY,
     "joint_stiffness": Department.RHEUMATOLOGY,
@@ -414,7 +379,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "gout": Department.RHEUMATOLOGY,
     "fibromyalgia": Department.RHEUMATOLOGY,
     "morning_stiffness": Department.RHEUMATOLOGY,
-
     # Gynecology
     "pelvic_pain": Department.GYNECOLOGY,
     "irregular_periods": Department.GYNECOLOGY,
@@ -425,21 +389,18 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "breast_pain": Department.GYNECOLOGY,
     "pregnancy_related": Department.GYNECOLOGY,
     "menopausal_symptoms": Department.GYNECOLOGY,
-
     # Hematology
     "easy_bruising": Department.HEMATOLOGY,
     "prolonged_bleeding": Department.HEMATOLOGY,
     "anemia_symptoms": Department.HEMATOLOGY,
     "swollen_lymph_nodes": Department.HEMATOLOGY,
     "blood_clot": Department.HEMATOLOGY,
-
     # Vascular Surgery
     "leg_ulcer": Department.VASCULAR_SURGERY,
     "varicose_veins": Department.VASCULAR_SURGERY,
     "cold_extremities": Department.VASCULAR_SURGERY,
     "peripheral_artery_pain": Department.VASCULAR_SURGERY,
     "deep_vein_thrombosis": Department.VASCULAR_SURGERY,
-
     # Pediatrics
     "child_fever": Department.PEDIATRICS,
     "child_rash": Department.PEDIATRICS,
@@ -448,7 +409,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "child_breathing_difficulty": Department.PEDIATRICS,
     "growth_concern": Department.PEDIATRICS,
     "vaccination_related": Department.PEDIATRICS,
-
     # Infectious Disease
     "prolonged_fever": Department.INFECTIOUS_DISEASE,
     "malaria_symptoms": Department.INFECTIOUS_DISEASE,
@@ -458,7 +418,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "tuberculosis_symptoms": Department.INFECTIOUS_DISEASE,
     "travel_related_illness": Department.INFECTIOUS_DISEASE,
     "sexually_transmitted_infection": Department.INFECTIOUS_DISEASE,
-
     # Allergy and Immunology
     "allergic_reaction": Department.ALLERGY_IMMUNOLOGY,
     "anaphylaxis": Department.ALLERGY_IMMUNOLOGY,
@@ -467,7 +426,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "drug_allergy": Department.ALLERGY_IMMUNOLOGY,
     "insect_sting_reaction": Department.ALLERGY_IMMUNOLOGY,
     "immune_deficiency": Department.ALLERGY_IMMUNOLOGY,
-
     # General Medicine — acute but non-specialist presentations
     "hypertension": Department.GENERAL_MEDICINE,
     "diabetes_follow_up": Department.GENERAL_MEDICINE,
@@ -483,7 +441,6 @@ SYMPTOM_DEPARTMENT_MAP: dict[str, Department] = {
     "dehydration": Department.GENERAL_MEDICINE,
     "insomnia": Department.GENERAL_MEDICINE,
     "weight_change": Department.GENERAL_MEDICINE,
-
     # Critical symptoms
     "cardiac_arrest": Department.CARDIOLOGY,
     "aortic_dissection": Department.VASCULAR_SURGERY,
